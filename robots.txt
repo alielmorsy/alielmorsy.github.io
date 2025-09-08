@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://alielmorsy.github.io/sitemap.xml

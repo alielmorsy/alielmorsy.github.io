@@ -1,0 +1,27 @@
+{
+    "version": "https://jsonfeed.org/version/1",
+    "title": "alielmorsy",
+    "description": "",
+    "home_page_url": "https://alielmorsy.github.io",
+    "feed_url": "https://alielmorsy.github.io/feed.json",
+    "user_comment": "",
+    "author": {
+        "name": "Ali Elmorsy"
+    },
+    "items": [
+        {
+            "id": "https://alielmorsy.github.io/test-post.html",
+            "url": "https://alielmorsy.github.io/test-post.html",
+            "title": "test post",
+            "summary": "test post wow",
+            "content_html": "<p>test post wow</p>",
+            "author": {
+                "name": "Ali Elmorsy"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-09-08T17:28:08+03:00",
+            "date_modified": "2025-09-08T17:28:08+03:00"
+        }
+    ]
+}
