@@ -3,39 +3,155 @@
     <title>alielmorsy</title>
     <link href="https://alielmorsy.github.io/feed.xml" rel="self" />
     <link href="https://alielmorsy.github.io" />
-    <updated>2025-09-08T21:35:11+03:00</updated>
+    <updated>2025-09-08T23:48:58+03:00</updated>
     <author>
         <name>Ali Elmorsy</name>
     </author>
     <id>https://alielmorsy.github.io</id>
 
     <entry>
-        <title>Test Plot with Lucide Icons</title>
+        <title>Software Rasterization Setup</title>
         <author>
             <name>Ali Elmorsy</name>
         </author>
-        <link href="https://alielmorsy.github.io/test-plot-with-lucide-icons.html"/>
-        <id>https://alielmorsy.github.io/test-plot-with-lucide-icons.html</id>
+        <link href="https://alielmorsy.github.io/software-rasterization-setup.html"/>
+        <id>https://alielmorsy.github.io/software-rasterization-setup.html</id>
+            <category term="Rasterization"/>
+            <category term="LinearAlgebra"/>
+            <category term="BarycentricCoordinates"/>
 
-        <updated>2025-09-08T17:28:08+03:00</updated>
+        <updated>2025-09-08T23:18:12+03:00</updated>
             <summary>
                 <![CDATA[
-                    Test Plot with Lucide Icons Scene 1: The Call <svg class="li li-bell icon" width="3rem" height="3rem" fill="none" stroke="#00ff00" stroke-width="3" viewBox="0 0 24 24"><g><path d="M10.268 21a2 2 0 0 0 3.464 0M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></g></svg> A distant bell rings, marking the beginning of the journey.
+                    This is the first blog post of the Project 2D Software Rasterization. In this step, we will set up our project and display a color&hellip;
                 ]]>
             </summary>
         <content type="html">
             <![CDATA[
-                <h1 id="test-plot-with-lucide-icons">Test Plot with Lucide Icons</h1>
-<h2 id="scene-1-the-call">Scene 1: The Call</h2>
-<p><svg class="li li-bell icon" width="3rem" height="3rem" fill="none" stroke="#00ff00" stroke-width="3" viewBox="0 0 24 24"><g><path d="M10.268 21a2 2 0 0 0 3.464 0M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></g></svg><br>A distant bell rings, marking the beginning of the journey.  </p><hr>
-<h2 id="scene-2-the-path">Scene 2: The Path</h2>
-<p><svg class="li li-map icon" width="3rem" height="3rem" fill="none" stroke="#ff6600" stroke-width="2" viewBox="0 0 24 24"><g><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0zM15 5.764v15M9 3.236v15"/></g></svg><br>A map unfolds, guiding the traveler through unknown lands.  </p><hr>
-<h2 id="scene-3-the-discovery">Scene 3: The Discovery</h2>
-<p><svg class="li li-compass icon" width="3rem" height="3rem" fill="none" stroke="#0066ff" stroke-width="3" viewBox="0 0 24 24"><g><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/><circle cx="12" cy="12" r="10"/></g></svg><br>The compass points toward a hidden secret waiting to be found.  </p><hr>
-<h2 id="scene-4-the-choice">Scene 4: The Choice</h2>
-<p><svg class="li li-key icon" width="3rem" height="3rem" fill="none" stroke="#ff00ff" stroke-width="2" viewBox="0 0 24 24"><g><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4M21 2l-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></g></svg><br>A key appears, symbolizing a decision that must be made.  </p><hr>
-<h2 id="scene-5-the-end">Scene 5: The End</h2>
-<p><svg class="li li-star icon" width="3rem" height="3rem" fill="none" stroke="#ffaa00" stroke-width="3" viewBox="0 0 24 24"><g><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></g></svg><br>A star shines brightly, closing the chapter with hope.  </p>
+                <p>This is the first blog post of the Project 2D Software Rasterization. In this step, we will set up our project and display a color instead of black.</p>
+<h2>Requirements:</h2>
+<ul>
+<li>CPP20 (I chose C++20 because it's more common nowadays)</li>
+<li>CMake (who uses Make in 2025?)</li>
+<li>SDL2 (It's more common than SDL3, and the internet is full of resources in case you get stuck)</li>
+<li>VCPkg (I am on Windows, so I need a package manager
+<ul>
+<li>I have installed SDL2 already using <code>vcpkg install sdl2</code></li>
+</ul>
+</li>
+</ul>
+<h2>Step 1: Setting Up the Project</h2>
+<p>Before writing any code, we need to organize our project and set up CMake. A clean project structure makes development easier as the project grows.</p>
+<p>I will go with this project structure:</p>
+<pre>├── CMakeLists.txt
+├── include/
+│   └── (header files go here)
+├── src/
+│   └── main.cpp
+│   └── renderer.cpp
+│   └── (other files)
+└── build/ (CMake will generate build files here)</pre>
+<p>Now let's setup cmake. I will go with this simple cmake script</p>
+<div>
+<pre>cmake_minimum_required(VERSION 3.29)
+project(rasterizer)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include directories
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+# Collect all cpp files in src/
+file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
+
+# Create executable from all cpp files
+add_executable(rasterizer ${SOURCES})
+
+# Find SDL2
+find_package(SDL2 REQUIRED)
+
+# Linking to SDL2
+target_include_directories(rasterizer PRIVATE ${SDL2_INCLUDE_DIRS})
+target_link_libraries(rasterizer PRIVATE ${SDL2_LIBRARIES})</pre>
+<h2>Step 2: Getting a Window</h2>
+<p>Let's write inside our <code>main</code>function</p>
+<pre class="language-cpp"><code>constexpr int width = 800, height = 600;
+
+SDL_Window* window = SDL_CreateWindow(
+    "Software Rasterizer",
+    SDL_WINDOWPOS_UNDEFINED,
+    SDL_WINDOWPOS_UNDEFINED,
+    width,
+    height,
+    SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN
+);
+
+if (!window) {
+    std::cerr &lt;&lt; "SDL_CreateWindow Error: " &lt;&lt; SDL_GetError() &lt;&lt; std::endl;
+    SDL_Quit();
+    return 1;
+}
+</code></pre>
+<p>We are just creating a window but our program still does nothing. To keep it alive, we need an event loop so it won’t quit immediately.</p>
+<pre class="language-cpp"><code>bool running = true;
+while (running) {
+    SDL_Event event;
+    while (SDL_PollEvent(&amp;event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                running = false;
+                break;
+            default:
+                break;
+        }
+    }
+}</code></pre>
+<h2>Step 3: Displaying Something</h2>
+<p>Now the real work begins. We will create a framebuffer (an array of pixels), draw into it, and then copy it into the window.</p>
+<p>SDL makes this easy: every window has a <code>SDL_Surface</code> you can get with <code>SDL_GetWindowSurface</code>. You can write directly into its <code>pixels</code> array, then call <code>SDL_UpdateWindowSurface</code> to show it on screen.</p>
+<pre class="language-cpp"><code>SDL_Surface* screen_surface = SDL_GetWindowSurface(window);
+
+while (running) {
+    // ... handle events ...
+
+    auto pixels = static_cast&lt;uint32_t*&gt;(screen_surface-&gt;pixels);
+    int pitch = screen_surface-&gt;pitch / 4;
+
+    for (int y = 0; y &lt; height; ++y) {
+        for (int x = 0; x &lt; width; ++x) {
+            pixels[y * pitch + x] = SDL_MapRGB(screen-&gt;format, x % 256, y % 256, 128);
+        }
+    }
+
+    SDL_Rect rect{0, 0, width, height};
+    SDL_BlitSurface(screen_surface, &amp;rect, SDL_GetWindowSurface(window), &amp;rect);
+    SDL_UpdateWindowSurface(window);
+}
+</code></pre>
+<p>That’s it. before the loop we iniitalize our screen surface and for each loop iteration (event loop) we loop on height and width and convert these indices to colors (coloring per pixel)</p>
+<p class="msg msg--info">We module by <strong>255 </strong>because colors from [0..255]</p>
+<p>Then we define a <code>SDL_Rect</code> with our width and height and we transfer our pixels to the window</p>
+<p>If everything went correct we should see these colroful window</p>
+<figure class="post__image post__image--center"><img loading="lazy"  src="https://alielmorsy.github.io/media/posts/6/Screenshot-2025-09-08-231659.png" alt="" width="800" height="597" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/6/responsive/Screenshot-2025-09-08-231659-xs.png 300w ,https://alielmorsy.github.io/media/posts/6/responsive/Screenshot-2025-09-08-231659-sm.png 480w ,https://alielmorsy.github.io/media/posts/6/responsive/Screenshot-2025-09-08-231659-md.png 768w ,https://alielmorsy.github.io/media/posts/6/responsive/Screenshot-2025-09-08-231659-lg.png 1024w"></figure>
+<p>Before we forget we need to clean this mess like surface, buffer,...etc before the program closes. </p>
+<pre class="language-cpp"><code>while(running){
+    // Event Loop...
+}
+//Freeing the surface frame buffer
+SDL_FreeSurface(screen_surface);
+//Destroying the window itself
+SDL_DestroyWindow(window);
+//Requesting from SDL to quit and free itself
+SDL_Quit();</code></pre>
+<p> </p>
+<h2>Step 4: Impelment clear function</h2>
+<p>As you saw in our event loop, we write the pixels on every iteration. That’s not actually necessary, since the pixel buffer persists between iterations. We’re doing it this way just to make it easier to understand.</p>
+<p class="msg msg--info">Drawing on every iteration is expensive. In real program rendering like Qt or Chrome, the screen is updated only when needed, for example during animations or when something new is added. In game engines it is different because they draw every iteration. This is needed since many things change all the time such as animations, physics, and effects. </p>
+<p> </p>
+<p>What a clear function and why do we need it?  </p>
+</div>
             ]]>
         </content>
     </entry>
