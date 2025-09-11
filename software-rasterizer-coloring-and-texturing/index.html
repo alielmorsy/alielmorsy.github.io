@@ -1,0 +1,141 @@
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Software Rasterizer: Coloring - alielmorsy</title><meta name="description" content="Filling a triangle with different colors In the previous post, We could fill a triangle with a single color that's not enough If you ask&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><link rel="canonical" href="https://alielmorsy.github.io/software-rasterizer-coloring-and-texturing/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="Software Rasterizer: Coloring"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="Filling a triangle with different colors In the previous post, We could fill a triangle with a single color that's not enough If you ask&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/software-rasterizer-coloring-and-texturing/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/software-rasterizer-coloring-and-texturing/"},"headline":"Software Rasterizer: Coloring","datePublished":"2025-09-10T22:19+03:00","dateModified":"2025-09-11T23:27+03:00","description":"Filling a triangle with different colors In the previous post, We could fill a triangle with a single color that's not enough If you ask&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+                    opacity: 1;
+                }</style></noscript><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=6952794d09552e9c142036a22115f64c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">Software Rasterizer: Coloring</h1><div class="post__meta"><time datetime="2025-09-10T22:19" class="post__date">September 10, 2025 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div><div class="post__tags"><a href="https://alielmorsy.github.io/tags/barycentriccoordinates/" class="invert">BarycentricCoordinates</a> <a href="https://alielmorsy.github.io/tags/rasterization/" class="invert">Rasterization</a></div></header><div class="post__entry"><h2>Filling a triangle with different colors</h2><p>In the previous post, We could fill a triangle with a single color that's not enough If you ask me we may need to draw a quad with different colors for. That's where we introduce linear gradients. Before explaining let's create a new header called <code>Color.h</code>. That will be our representation for a color and our way to convert it to  uint32 to be used inside the pixel directly:</p><pre class="language-cpp"><code>#pragma once
+#include &lt;cstdint&gt;
+
+struct Color {
+    uint8_t r, g, b, a;
+
+    Color(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_ = 255) : r(r_), g(g_), b(b_), a(a_) {
+    }
+
+    uint32_t to_uint32() const {
+        return (static_cast&lt;uint32_t&gt;(a) &lt;&lt; 24) |
+               (static_cast&lt;uint32_t&gt;(b) &lt;&lt; 16) |
+               (static_cast&lt;uint32_t&gt;(g) &lt;&lt; 8)  |
+               static_cast&lt;uint32_t&gt;(r);
+    }
+    [[nodiscard]] static Color from_uint32(uint32_t v) {
+        uint8_t b = static_cast&lt;uint8_t&gt;(v &amp; 0xFF);
+        uint8_t g = static_cast&lt;uint8_t&gt;((v &gt;&gt; 8) &amp; 0xFF);
+        uint8_t r = static_cast&lt;uint8_t&gt;((v &gt;&gt; 16) &amp; 0xFF);
+        uint8_t a = static_cast&lt;uint8_t&gt;((v &gt;&gt; 24) &amp; 0xFF);
+        return {r, g, b, a};
+    }
+};
+</code></pre><p>Let's take this even further. Let's make another struct called <code>Vertex</code> which will hold our vertex position and color. Let's create a new header for that called <code>Vertex.h</code></p><pre class="language-cpp"><code>#pragma once
+#include "Color.h"
+#include "Point.h"
+
+struct Vertex {
+    Point position;
+    Color color;
+};
+</code></pre><p>Now each vertex in our triangles list will have it's own color. Now how will we fill our colorful triangles? </p><p>From the lost post we explained <strong>Barycentric Coordinate System </strong>and how we it to calculate three weights which help use decide whether our point inside or outside the triangle. Surprisely we will use these weights $w_0, w_1, w_3$ to decide the color of our pixel inside this colorful triangle.</p><p>$$<br>\text{final\_color} = v_0.\text{color} \cdot w_0 + v_1.\text{color} \cdot w_1 + v_2.\text{color} \cdot w_2<br>$$</p><p>where $v_0, v_1, v_2$ are our triangles vertices in counter-clockwise  winding order. the final color will be our pixel color. I have updated some things in my draw_triangle function. So, I will post everything with some comments explaining what's going on 💀</p><p>That's how my <code>draw.cpp</code> looks like</p><pre class="language-cpp"><code>#include "draw.h"
+#include &lt;cstdint&gt;
+#include &lt;algorithm&gt;
+#include &lt;cmath&gt;
+#include &lt;vector&gt;
+
+
+void draw_triangle(uint32_t *pixels, int width, int height,
+                   const Vertex &amp;v0, const Vertex &amp;v1, const Vertex &amp;v2) {
+    // Positions
+    Point p0 = v0.position;
+    Point p1 = v1.position;
+    Point p2 = v2.position;
+
+    // Signed area (positive if CCW, negative if CW)
+    float area = det2D(p1 - p0, p2 - p0);
+    if (area == 0.0f) return; // Degenerate triangle
+
+    //Calculating the invert of an area one and multiply by it later as multiplying usually faster than dividing
+    float inv_area = 1.0f / area;
+
+    // Bounding box
+    int minX = std::floor(std::min({p0.x, p1.x, p2.x}));
+    int maxX = std::ceil(std::max({p0.x, p1.x, p2.x}));
+    int minY = std::floor(std::min({p0.y, p1.y, p2.y}));
+    int maxY = std::ceil(std::max({p0.y, p1.y, p2.y}));
+
+    // Clamp to framebuffer
+    minX = std::max(minX, 0);
+    maxX = std::min(maxX, width - 1);
+    minY = std::max(minY, 0);
+    maxY = std::min(maxY, height - 1);
+
+    // Pre computing edges outside the loop as their values  won't change for a triangle
+    Point p21 = p2 - p1;
+    Point p02 = p0 - p2;
+    for (int y = minY; y &lt;= maxY; y++) {
+        for (int x = minX; x &lt;= maxX; x++) {
+            Point p = {
+                static_cast&lt;float&gt;(x) + 0.5f,
+                static_cast&lt;float&gt;(y) + 0.5f
+            }; // pixel center
+
+            // Compute barycentric weights
+            float w0 = det2D(p21, p - p1) * inv_area; // weight for v0
+            float w1 = det2D(p02, p - p2) * inv_area; // weight for v1
+            float w2 = 1.0f - w0 - w1; // weight for v2
+
+            // Inside test
+            if (w0 &gt;= 0 &amp;&amp; w1 &gt;= 0 &amp;&amp; w2 &gt;= 0) {
+                // Interpolated color rgba
+                float srcR = v0.color.r * w0 + v1.color.r * w1 + v2.color.r * w2;
+                float srcG = v0.color.g * w0 + v1.color.g * w1 + v2.color.g * w2;
+                float srcB = v0.color.b * w0 + v1.color.b * w1 + v2.color.b * w2;
+                float srcA = v0.color.a * w0 + v1.color.a * w1 + v2.color.a * w2;
+
+                // Converting this color to uint32 to be inserted inside the buffer
+                pixels[y * width + x] = Color(srcR, srcG, srcB, srcA).to_uint32();
+            }
+        }
+    }
+}
+
+void draw_indexed(uint32_t *pixels, int width, int height, const std::vector&lt;Vertex&gt; &amp;vertices,
+                  const std::vector&lt;int&gt; &amp;indices) {
+    // We iterate through the indices, 3 at a time, to form triangles.
+    for (size_t i = 0; i &lt; indices.size(); i += 3) {
+        // Get the vertices for the current triangle from the vertex buffer
+        const Vertex &amp;v0 = vertices[indices[i]];
+        const Vertex &amp;v1 = vertices[indices[i + 1]];
+        const Vertex &amp;v2 = vertices[indices[i + 2]];
+
+        // Call our triangle drawing function.
+        // The arguments a, c, b correspond to the vertices of a CCW triangle.
+        draw_triangle(pixels, width, height, v0, v1, v2);
+    }
+}
+</code></pre><p> </p><p>Let's update what are we drawing inside our event loop inside <code>main.cpp</code></p><pre class="language-cpp"><code>while(running){
+  // event and texture stuff  
+ std::vector&lt;Vertex&gt; vertices = {
+            { Point(100, 300), {255,   0,   0, 255} }, // Red
+            { Point(200, 300), {  255, 0,   0, 255} }, // Green
+            { Point(200, 400), {  0,   0, 255, 255} }, // Blue
+            { Point(100, 400), {0,0,   255, 255} }  // Yellow
+        };
+        std::vector&lt;int&gt; indices = {
+            0, 1, 2,  // First triangle
+            0, 2, 3   // Second triangle
+        };
+draw_indexed(pixels, width, height, vertices, indices);
+}</code></pre><p>If everything went smooth, We should be able to see this:</p><figure class="post__image post__image--center"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/8/Screenshot-2025-09-10-223057.png" alt="" width="800" height="624" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/8/responsive/Screenshot-2025-09-10-223057-xs.png 300w, https://alielmorsy.github.io/media/posts/8/responsive/Screenshot-2025-09-10-223057-sm.png 480w, https://alielmorsy.github.io/media/posts/8/responsive/Screenshot-2025-09-10-223057-md.png 768w, https://alielmorsy.github.io/media/posts/8/responsive/Screenshot-2025-09-10-223057-lg.png 1024w"></figure><p> </p><p>This post was a bit short because the next one will be a big loner than the rest because we will talk about textures and how it's done in a CPU rasterizer.</p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on September 11, 2025</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/software-rasterizer-drawing-a-triangle/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  Software Rasterizer: Drawing a Triangle "><span class="btn__icon">←</span> <span class="btn__text">Software Rasterizer: Drawing a Triangle</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                images[i].classList.add('is-loaded');
+            } else {
+                images[i].addEventListener('load', function () {
+                    this.classList.add('is-loaded');
+                }, false);
+            }
+        }</script><script>window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};</script></body></html>
