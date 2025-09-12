@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Software Rasterizer: Texturing - alielmorsy</title><meta name="description" content="Rendering is not only about colors. Sometimes we want to render images too. But as you might expect, that won't be as straightforward as colors&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><link rel="canonical" href="https://alielmorsy.github.io/software-rasterizer-texturing/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="Software Rasterizer: Texturing"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="Rendering is not only about colors. Sometimes we want to render images too. But as you might expect, that won't be as straightforward as colors&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/software-rasterizer-texturing/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/software-rasterizer-texturing/"},"headline":"Software Rasterizer: Texturing","datePublished":"2025-09-11T23:29+03:00","dateModified":"2025-09-12T03:03+03:00","description":"Rendering is not only about colors. Sometimes we want to render images too. But as you might expect, that won't be as straightforward as colors&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Software Rasterizer: Texturing - alielmorsy</title><meta name="description" content="Learn how to improve texture rendering performance in a software rasterizer. From handling wrap modes to optimizing with SSE SIMD, this guide explores techniques for efficient texturing at different image scales."><meta name="generator" content="Publii Open-Source CMS for Static Site"><link rel="canonical" href="https://alielmorsy.github.io/software-rasterizer-texturing/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="Software Rasterizer: Texturing"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="Learn how to improve texture rendering performance in a software rasterizer. From handling wrap modes to optimizing with SSE SIMD, this guide explores techniques for efficient texturing at different image scales."><meta property="og:url" content="https://alielmorsy.github.io/software-rasterizer-texturing/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/software-rasterizer-texturing/"},"headline":"Software Rasterizer: Texturing","datePublished":"2025-09-11T23:29+03:00","dateModified":"2025-09-12T21:53+03:00","description":"Learn how to improve texture rendering performance in a software rasterizer. From handling wrap modes to optimizing with SSE SIMD, this guide explores techniques for efficient texturing at different image scales.","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
                     opacity: 1;
                 }</style></noscript><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=6952794d09552e9c142036a22115f64c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">Software Rasterizer: Texturing</h1><div class="post__meta"><time datetime="2025-09-11T23:29" class="post__date">September 11, 2025 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div><div class="post__tags"><a href="https://alielmorsy.github.io/tags/rasterization/" class="invert">Rasterization</a> <a href="https://alielmorsy.github.io/tags/sampling/" class="invert">sampling</a> <a href="https://alielmorsy.github.io/tags/texel/" class="invert">texel</a></div></header><div class="post__entry"><p>Rendering is not only about colors. Sometimes we want to render images too. But as you might expect, that won't be as straightforward as colors due to many reasons:</p><ul><li>Images can easily vary in size</li><li>You may want to downscale or upscale</li></ul><p>That said, images cannot be rendered directly; we need to sample them. There are many sampling algorithms, but all of them rely on UV coordinates. I won't go into full detail—you can check a YouTube video on how UV mapping works in the world of 3D. If you've ever used software like Unity, Blender, etc., you've probably seen it.</p><p>Well, I felt a bit guilty, so let me give a quick explanation. We need a way to tell each vertex which part of the image it will hold. Obviously, we cannot use pixel positions directly because the quad we are filling might be a different size than the actual image. That's where UV coordinates come in. This is another usage of <strong>Barycentric Coordinates</strong>. We still use weights like we did in the previous post with colors, by adding another point to our Vertex struct called <code>uv</code>.</p><p><code>Vertex.h</code></p><pre class="language-cpp"><code>struct Vertex {
     Point position;
@@ -161,15 +161,17 @@
 			updateAll();
 
 
-		})()</script></p><p>Playing with the canvases above reveals an important difference between bilinear and nearest-neighbor sampling. Notice how the checkerboard looks blurred when using bilinear.That's normal since bilinear averages the 4 closest neighbors for each pixel, sharp edges get softened. This averaging is exactly what makes gradients appear smooth, but it also means high-contrast patterns, like a checkerboard, lose their crispness when scaled.</p><p> </p><p>Now, Let's get back to code. First, we need a way to load images. Luckily, there is a single header called <a href="https://github.com/nothings/stb/blob/master/stb_image.h">stb_image</a>  that can load common image  extensions using a single API. You can download it and add it directly to our <code>include</code> folder. In order to use it, We have to do something called <code>STB_IMPLEMENTATION</code>. That header contains both implementation and the functions itself and the file is huge inling all these functions will take ages from the compiler to finish. So, we have to go to one of our CPP files and define a macro there, That macro will define all the header functions inside that CPP, so we can freely. In our <code>main.cpp</code> we add these two lines at the beginning of the file</p><pre class="language-cpp"><code>#define STB_IMAGE_IMPLEMENTATION
+		})()</script></p><p>Playing with the canvases above reveals an important difference between bilinear and nearest-neighbor sampling. Notice how the checkerboard looks blurred when using bilinear. That's normal since bilinear averages the 4 closest neighbors for each pixel, sharp edges get softened. This averaging is exactly what makes gradients appear smooth, but it also means high-contrast patterns, like a checkerboard, lose their crispness when scaled.</p><p> </p><h2>How Bi-linear works?</h2><p data-start="108" data-end="419">We mentioned already that images vary in size, and sometimes we need to scale them up or down. The <strong data-start="207" data-end="237">nearest-neighbor algorithm</strong> works by simply picking the closest texel. That’s why, as you saw above with gradients, it ends up looking like chunky little squares—each pixel is basically copied and stretched.</p><p data-start="421" data-end="606"><strong data-start="421" data-end="447">Bilinear interpolation</strong> takes a different approach. Instead of saying “just grab the nearest texel,” it asks: <em data-start="534" data-end="604">what if we average between multiple texels to get a smoother result?</em></p><p data-start="970" data-end="999">The process goes like this:</p><ol data-start="1000" data-end="1220"><li data-start="1000" data-end="1076"><p data-start="1003" data-end="1076">Blend horizontally across the top row (between top-left and top-right).</p></li><li data-start="1000" data-end="1076">Blend horizontally across the bottom row (between bottom-left and bottom-right).</li><li data-start="1000" data-end="1076">Finally, blend vertically between those two results.</li></ol><p class="msg msg--info">When you sample a texture using UV coordinates, most of the time you land <strong data-start="704" data-end="722">between pixels</strong>, not exactly on one. Therefore, Bilinear scaling blends these four values based on how close the UV is to each corner.</p><h2>Wrapping</h2><p>So far, we have been assuming UV coordinates stay between $0$ and $1$. What if they don't? What if the user used for example $v = -0.2$? We need something to handle these cases (which you may consider them edge cases but maybe they are not). That's where we introduce wrapping. Wrapping decides what happens when UV go outside the default [0,1] range. In our implementation we will use these modes:</p><ul><li><strong>Clamp</strong><ul><li>We can think of it like "don't go outside this edge" meaning If UVs are below $0$, they will be treated as $0$. The same happens if it's above $1$, They will be treated as $1$. This mode prevent tiling</li></ul></li><li><strong>Repeat</strong><ul><li>This mode keeps repeating the image like what we say in wallpapers. UVs outside the range get wrapped back inside the image.</li></ul></li><li><strong>Mirror (Repeat by mirrored)</strong><ul><li>Similar to repeat, but instead of tiling the image in the same direction, every second tile is flipped like a mirror.</li></ul></li></ul><p> </p><p>Now, Let's get back to code. First, we need a way to load images. Luckily, there is a single header called <a href="https://github.com/nothings/stb/blob/master/stb_image.h">stb_image</a>  that can load common image  extensions using a single API. You can download it and add it directly to our <code>include</code> folder. In order to use it, We have to do something called <code>STB_IMPLEMENTATION</code>. That header contains both implementation and the functions itself and the file is huge inling all these functions will take ages from the compiler to finish. So, we have to go to one of our CPP files and define a macro there, That macro will define all the header functions inside that CPP, so we can freely. In our <code>main.cpp</code> we add these two lines at the beginning of the file</p><pre class="language-cpp"><code>#define STB_IMAGE_IMPLEMENTATION
 #include &lt;stb_image.h&gt;</code></pre><p> </p><p>Let's create a class. we will call it Sampler. We will create a header and and a cpp file for it. </p><p><code>Sampler.h</code></p><pre class="language-cpp"><code>#pragma once
 #include &lt;stb_image.h&gt;
 #include &lt;string_view&gt;
+#include &lt;memory&gt;
 
 class Sampler {
 public:
-    static Sampler loadImage(std::string_view path);
+    static std::shared_ptr&lt;Sampler&gt; loadImage(std::string_view path);
 
+    Sampler() : width(0), height(0), channels(0), pixels(nullptr) {}
     Sampler(const Sampler&amp;) = delete;
 
     Sampler&amp; operator=(const Sampler&amp;) = delete;
@@ -202,7 +204,7 @@ public:
 private:
     size_t width, height, channels;
     uint8_t *data;
-    Sampler() : width(0), height(0), channels(0), pixels(nullptr) {}
+
 
 
 };
@@ -212,22 +214,22 @@ private:
 #include &lt;vector&gt;
 
 
-Sampler Sampler::loadImage(std::string_view path) {
-    Sampler sampler;
-
+std::shared_ptr&lt;Sampler&gt; Sampler::loadImage(std::string_view path) {
     int w, h, c;
-    sampler.data= stbi_load(path.data(), &amp;w, &amp;h, &amp;c, 0);
-    if (!sampler.data) {
+    unsigned char* imgData = stbi_load(path.data(), &amp;w, &amp;h, &amp;c, 0);
+
+    if (!imgData) {
         throw std::runtime_error("Failed to load image: " + std::string(path));
     }
 
-    sampler.width = static_cast&lt;size_t&gt;(w);
-    sampler.height = static_cast&lt;size_t&gt;(h);
-    sampler.channels = static_cast&lt;size_t&gt;(c);
+    auto sampler = std::make_shared&lt;Sampler&gt;();
+    sampler-&gt;data = imgData;
+    sampler-&gt;width = static_cast&lt;size_t&gt;(w);
+    sampler-&gt;height = static_cast&lt;size_t&gt;(h);
+    sampler-&gt;channels = static_cast&lt;size_t&gt;(c);
 
-    return sampler;  // Move constructor will be used here
-}
-</code></pre><p>Here, I’m just creating an instance of our class, then calling <code data-start="164" data-end="175">stbi_load</code>, which takes the path as a character array, along with pointers to width, height, and channels. The last parameter, number of desired channels, tells STB how many channels we want in the loaded image. Setting it to zero means we keep all the channels the file already has.</p><p>Now, Let's add a simple function called <code>at</code>which will give us the color for the current pixel. I will add it inside the header.</p><pre class="language-cpp"><code>class Sampler{
+    return sampler;
+}</code></pre><p>Here, I’m just creating an instance of our class, then calling <code data-start="164" data-end="175">stbi_load</code>, which takes the path as a character array, along with pointers to width, height, and channels. The last parameter, number of desired channels, tells STB how many channels we want in the loaded image. Setting it to zero means we keep all the channels the file already has.</p><p>Now, Let's add a simple function called <code>at</code>which will give us the color for the current pixel. I will add it inside the header.</p><pre class="language-cpp"><code>class Sampler{
 public:
 //....
 [[nodiscard]] Color at(size_t x, size_t y) const {
@@ -240,7 +242,168 @@ public:
     }
 private:
 //....
-}</code></pre><p data-start="107" data-end="275">Unlike SDL, STB returns a flat <code data-start="138" data-end="153">unsigned char</code> buffer, where all pixel data is packed sequentially where each pixel consists of its channel values stored one after another.</p><p> </p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on September 12, 2025</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/software-rasterizer-coloring-and-texturing/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  Software Rasterizer: Coloring "><span class="btn__icon">←</span> <span class="btn__text">Software Rasterizer: Coloring</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+}</code></pre><p data-start="107" data-end="275">Unlike SDL, STB returns a flat <code data-start="138" data-end="153">unsigned char</code> buffer, where all pixel data is packed sequentially where each pixel consists of its channel values stored one after another.</p><p data-start="107" data-end="275"> </p><p data-start="107" data-end="275">Let's make an edit in our draw functions by making them accept a sampler function</p><pre class="language-cpp"><code>void draw_triangle(uint32_t *pixels, int width, int height,
+                   const Vertex &amp;v0, const Vertex &amp;v1, const Vertex &amp;v2, std::shared_ptr&lt;Sampler&gt; &amp;sampler);
+
+void draw_indexed(uint32_t *pixels, int width, int height, const std::vector&lt;Vertex&gt; &amp;vertices,
+                  const std::vector&lt;int&gt; &amp;indices, std::shared_ptr&lt;Sampler&gt; sampler = nullptr);</code></pre><p class="msg msg--info">In <code>draw_indexed</code> I made the sampler copyable inside the function because we need to be able to provide null directly. That's not the case for <code>draw_triangle</code> as I made it take <code>shared_ptr</code> reference because it will be delivered an empty shared pointer all the time.</p><p>Inside <code>draw_indexed</code> implementation. We need to update the <code>draw_triangle</code> call</p><pre class="language-cpp"><code>for (size_t i = 0; i &lt; indices.size(); i += 3) {
+        // accessing vertices
+        draw_triangle(pixels, width, height, v0, v1, v2, sampler);
+    }</code></pre><p>Let's now calculate the UV for a texture like we did with a color.</p><p>Inside our <code>draw_triangle</code> function:</p><pre class="language-cpp"><code>/// Looping over pixels xy and calculate the weights
+if (w0 &gt;= 0 &amp;&amp; w1 &gt;= 0 &amp;&amp; w2 &gt;= 0) {
+	Point uv = v0.uv * w0 + v1.uv * w1 + v2.uv * w2;
+	if (sampler) {
+		//TODO
+	}else {
+		float srcR = v0.color.r * w0 + v1.color.r * w1 + v2.color.r * w2;
+		float srcG = v0.color.g * w0 + v1.color.g * w1 + v2.color.g * w2;
+		float srcB = v0.color.b * w0 + v1.color.b * w1 + v2.color.b * w2;
+		float srcA = v0.color.a * w0 + v1.color.a * w1 + v2.color.a * w2;
+
+
+		// Converting this color to uint32 to be inserted inside the buffer
+		pixels[y * width + x] = Color(srcR, srcG, srcB, srcA).to_uint32();
+	}
+                
+}</code></pre><p> </p><p>Before we go implement the sampling logic. Let's create a utility function to wrap our UV. inside <code>Sampler.h</code></p><pre class="language-cpp"><code>class Sampler {
+    // other stuff...
+    void setWrapMode(const WrapMode mode) {
+        mode_ = mode;
+    }
+
+    Color sampleBilinear(const Point &amp;uv) const;
+private:
+    [[nodiscard]] float wrapUV(float v) const {
+        switch (mode_) {
+            case CLAMP:
+                return std::max(0.0f, std::min(1.0f, v));
+            case REPEAT:
+                return v - std::floor(v); // keep in [0,1)
+            case MIRROR: {
+                float frac = v - std::floor(v);
+                int i = static_cast&lt;int&gt;(std::floor(v));
+                return (i % 2 == 0) ? frac : 1.0f - frac;
+            }
+        }
+        return v;
+    }
+
+    WrapMode mode_ = CLAMP;
+};</code></pre><p> </p><p class="msg msg--highlight">The parameter $v$ in <code>wrapUV</code> not only for the $v$ function rather it will be used for both $u$ and $v$</p><p>Let's head back to an old struct <strong>Color. </strong>In our <code>Color.h</code> we need a new utility to interpolate between colors.</p><pre class="language-cpp"><code>struct Color{
+  // Other stuff....
+  [[nodiscard]] static Color lerp(const Color&amp; c1, const Color&amp; c2, float t) {
+        t = std::clamp(t, 0.0f, 1.0f);
+        auto lerpComp =  [t](uint8_t a, uint8_t b) -&gt; uint8_t {
+            return static_cast&lt;uint8_t&gt;(a + (b - a) * t + 0.5f); 
+        };
+        return {
+            lerpComp(c1.r, c2.r),
+            lerpComp(c1.g, c2.g),
+            lerpComp(c1.b, c2.b),
+            lerpComp(c1.a, c2.a)
+        };
+    }
+}</code></pre><p> </p><p>Let's head back to our <code>Sampler.h</code> to implement our sample function. The first step will be using the static wrap function we implemented before to wrap our UV</p><pre class="language-cpp"><code>Color Sampler::sampleBilinear(const Point &amp;uv) const {
+    float u = wrapUV(uv.x);
+    float v = wrapUV(uv.y);
+</code></pre><p>Now, let's convert this UV to a position in the image by multiplying with the image dimensions</p><pre class="language-cpp"><code>float x = u * (width_ - 1.f);
+float y = v * (height_ - 1.f);
+</code></pre><p>We need the integer and fractional parts of these coordinates. The integers give us the nearest texel indices, while the fractional parts tell us how far we are between them.</p><pre class="language-cpp"><code>int x0 = static_cast&lt;int&gt;(std::floor(x));
+int y0 = static_cast&lt;int&gt;(std::floor(y));
+int x1 = std::min(x0 + 1, static_cast&lt;int&gt;(width_ - 1));
+int y1 = std::min(y0 + 1, static_cast&lt;int&gt;(height_ - 1));
+
+float fx = x - x0; // fractional offset in x
+float fy = y - y0; // fractional offset in y
+</code></pre><p>Next, we fetch the four neighboring texels that surround our UV coordinate. Think of it like a square: top-left, top-right, bottom-left, bottom-right.</p><pre class="language-cpp"><code>Color c00 = at(x0, y0);
+Color c10 = at(x1, y0);
+Color c01 = at(x0, y1);
+Color c11 = at(x1, y1);
+</code></pre><p>Finally, we do the interpolation in two steps: first along the x direction, then along the y direction.</p><pre class="language-cpp"><code>Color cx0 = Color::lerp(c00, c10, fx); // bottom row blend
+Color cx1 = Color::lerp(c01, c11, fx); // top row blend
+Color c   = Color::lerp(cx0, cx1, fy); // vertical blend
+return c;
+}
+</code></pre><p>And that’s it. Now, we need to use this function inside our <code>draw_triangle</code> function</p><pre class="language-cpp"><code>if (w0 &gt;= 0 &amp;&amp; w1 &gt;= 0 &amp;&amp; w2 &gt;= 0) {
+    Point uv = v0.uv * w0 + v1.uv * w1 + v2.uv * w2;
+    if (sampler) {
+        pixels[y * width + x] = sampler-&gt;sampleBilinear(uv).to_uint32();
+    } else {
+        // Calculate coloring
+    }
+}
+</code></pre><p> </p><p>We almost ready. Let's try our code in <code>main.cpp</code></p><pre class="language-cpp"><code>// ....
+std::shared_ptr&lt;Sampler&gt; image = Sampler::loadImage("example.png"); // loading the image
+while (running) {
+    // ....
+    std::vector&lt;Vertex&gt; vertices = {
+        {Point(100, 300), {255, 0, 0, 255}, {0.0f, 0.0f}}, // Top-left  (Red)
+        {Point(200, 300), {255, 0, 0, 255}, {1.0f, 0.0f}}, // Top-right (Green)
+        {Point(200, 400), {0, 0, 255, 255}, {1.0f, 1.0f}}, // Bottom-right (Blue)
+        {Point(100, 400), {0, 0, 255, 255}, {0.0f, 1.0f}}  // Bottom-left  (Yellow)
+    };
+
+    std::vector&lt;int&gt; indices = {
+        0, 1, 2, // First triangle
+        0, 2, 3  // Second triangle
+    };
+
+    draw_indexed(pixels, width, height, vertices, indices, image);
+}
+</code></pre><p>If you run the code now you should see your image right, You can play with the quad size and the wrapping to see different size based on your image</p><h3>Bonus Part</h3><p data-start="108" data-end="445">If you run this code in <strong data-start="132" data-end="146">Debug mode</strong>, you may get around <strong data-start="167" data-end="177">59 FPS</strong>, depending on your CPU. In <strong data-start="205" data-end="221">Release mode</strong>, you will easily hit the maximum frame rate (limited by VSYNC). That’s fine for rendering a single image, but once you try to render four or five images of different sizes, you’ll notice a significant drop in performance.</p><p data-start="447" data-end="538">To address this issue, I’ll introduce the first <strong data-start="495" data-end="520">SSE SIMD optimization</strong> in this series.</p><p data-start="540" data-end="862"><strong data-start="540" data-end="552">Why SSE?</strong> Because it’s more than enough for our use case — SSE provides <strong data-start="615" data-end="636">128-bit registers</strong>, which means a single instruction can process multiple color values at once (for example, two pixels). I won’t go into the full explanation here; if you already know the basics of SSE, you’ll be able to understand the code.</p><pre class="language-apacheconf"><code>#include &lt;emmintrin.h&gt; 
+Color Sampler::sampleBilinear(const Point &amp;uv) const {
+    float u = wrapUV(uv.x);
+    float v = wrapUV(uv.y);
+
+    float x = u * (width_ - 1.f);
+    float y = v * (height_ - 1.f);
+
+    int x0 = static_cast&lt;int&gt;(std::floor(x));
+    int y0 = static_cast&lt;int&gt;(std::floor(y));
+    int x1 = std::min(x0 + 1, static_cast&lt;int&gt;(width_ - 1));
+    int y1 = std::min(y0 + 1, static_cast&lt;int&gt;(height_ - 1));
+
+    float fx = x - x0;
+    float fy = y - y0;
+
+    // Load 4 neighbors as 32-bit RGBA
+    Color c00 = at(x0, y0);
+    Color c10 = at(x1, y0);
+    Color c01 = at(x0, y1);
+    Color c11 = at(x1, y1);
+
+    // Convert to float vectors [r,g,b,a]
+    auto toVec = [](const Color &amp;c) {
+        return _mm_set_ps(c.a, c.b, c.g, c.r); // order: r,g,b,a
+    };
+
+    __m128 v00 = toVec(c00);
+    __m128 v10 = toVec(c10);
+    __m128 v01 = toVec(c01);
+    __m128 v11 = toVec(c11);
+
+    __m128 fxv = _mm_set1_ps(fx);
+    __m128 fyv = _mm_set1_ps(fy);
+
+    // Horizontal lerp
+    __m128 cx0 = _mm_add_ps(v00, _mm_mul_ps(_mm_sub_ps(v10, v00), fxv));
+    __m128 cx1 = _mm_add_ps(v01, _mm_mul_ps(_mm_sub_ps(v11, v01), fxv));
+
+    // Vertical lerp
+    __m128 cFinal = _mm_add_ps(cx0, _mm_mul_ps(_mm_sub_ps(cx1, cx0), fyv));
+
+    // Round and pack back to uint8
+    alignas(16) float out[4];
+    _mm_store_ps(out, cFinal);
+
+    return Color(
+        static_cast&lt;uint8_t&gt;(std::clamp(out[0], 0.0f, 255.0f)),
+        static_cast&lt;uint8_t&gt;(std::clamp(out[1], 0.0f, 255.0f)),
+        static_cast&lt;uint8_t&gt;(std::clamp(out[2], 0.0f, 255.0f)),
+        static_cast&lt;uint8_t&gt;(std::clamp(out[3], 0.0f, 255.0f))
+    );
+}
+</code></pre><p> </p><p>In the next post, We will be going in more advanced concepts. Disclaimer: It  won't be anti-aliasing</p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on September 12, 2025</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/software-rasterizer-coloring-and-texturing/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  Software Rasterizer: Coloring "><span class="btn__icon">←</span> <span class="btn__text">Software Rasterizer: Coloring</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
         for (var i = 0; i < images.length; i++) {
             if (images[i].complete) {
                 images[i].classList.add('is-loaded');
