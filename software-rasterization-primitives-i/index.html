@@ -1,0 +1,392 @@
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Software Rasterization: Primitives I - alielmorsy</title><meta name="description" content="So far we worked with rectangles (aka quads) which is two triangles, but world is way more than that we have lines, circles, curves, and&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><link rel="canonical" href="https://alielmorsy.github.io/software-rasterization-primitives-i/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="Software Rasterization: Primitives I"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="So far we worked with rectangles (aka quads) which is two triangles, but world is way more than that we have lines, circles, curves, and&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/software-rasterization-primitives-i/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/software-rasterization-primitives-i/"},"headline":"Software Rasterization: Primitives I","datePublished":"2025-09-13T18:10+03:00","dateModified":"2025-09-13T19:58+03:00","description":"So far we worked with rectangles (aka quads) which is two triangles, but world is way more than that we have lines, circles, curves, and&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+                    opacity: 1;
+                }</style></noscript><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=0d8f74e30dc86a895725a07311c4e87c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">Software Rasterization: Primitives I</h1><div class="post__meta"><time datetime="2025-09-13T18:10" class="post__date">September 13, 2025 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div><div class="post__tags"><a href="https://alielmorsy.github.io/tags/linearalgebra/" class="invert">LinearAlgebra</a> <a href="https://alielmorsy.github.io/tags/primitives/" class="invert">Primitives</a> <a href="https://alielmorsy.github.io/tags/rasterization/" class="invert">Rasterization</a> <a href="https://alielmorsy.github.io/tags/vectors/" class="invert">vectors</a></div></header><div class="post__entry"><p>So far we worked with rectangles (aka quads) which is two triangles, but world is way more than that we have lines, circles, curves, and even polygons. That's where we introduce primitives. </p><p> </p><h2>Lines:</h2><p>Let's start by the most simple primitives so far. Lines are tricky because if you think about we can draw a simple one pixel line. But who does that in 2025? We need to have thickness and maybe make the color with gradients. That's where the magic happens. Instead of drawing it as pixels, Let's draw lines as quads, How? if you look closely to any line you can see it's a  small  rectangle because it has no curves it's a line. </p><p>Before we step into the algorithm we need first to know what is a <strong>normal </strong>and what's <strong data-start="132" data-end="149">perpendicular</strong> </p><h3> What does <em data-start="126" data-end="141">perpendicular</em> mean?</h3><p>Let's say we have vectors $u$ and $v$. We can say they are <strong data-start="177" data-end="194">perpendicular</strong> if they meet at a $90^{\circ}$ angle.</p><figure class="post__image post__image--center"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/10//perpendicular-lines-1612441009.png" alt="" width="500" height="404" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/10//responsive/perpendicular-lines-1612441009-xs.png 300w, https://alielmorsy.github.io/media/posts/10//responsive/perpendicular-lines-1612441009-sm.png 480w, https://alielmorsy.github.io/media/posts/10//responsive/perpendicular-lines-1612441009-md.png 768w, https://alielmorsy.github.io/media/posts/10//responsive/perpendicular-lines-1612441009-lg.png 1024w"></figure><p> </p><h3>Now, What's a normal?</h3><p>A normal vector is a vector that's <strong data-start="132" data-end="149">perpendicular</strong> to another vector. It's commonly used to describe the orientation or direction  of where the vector goes</p><div><h3>Understanding Normal Vectors (Interactive)</h3><p>Drag the points <strong>A</strong> and <strong>B</strong>. The blue arrow is the direction vector. The red arrow is its normal vector.</p><canvas id="perp_normal_canvas" style="cursor: crosshair;" width="700" height="400"></canvas><p id="info"></p><div><hr><h3>So, what's the difference between "Normal" and "Perpendicular"?</h3><p>In this context, they mean the same thing! A <strong>normal vector</strong> is simply a vector that is <strong>perpendicular</strong> (at a $90^{\circ}$ angle) to another vector or surface. The terms are often used interchangeably.</p><h3>How Does the Math Work?</h3><p>We can prove two vectors are perpendicular using a mathematical tool called the <strong>Dot Product</strong>.</p><ul><li>First, we get the direction vector $\overrightarrow{d}$ by subtracting the points: $$ \overrightarrow{d} = B - A = (B_x - A_x, B_y - A_y) $$</li><li>To find a vector perpendicular to $d = (x, y)$, we can use a simple trick: swap the components and negate one of them. This gives us the normal vector $\overrightarrow{n} = (-y, x)$.</li><li><strong>The Proof:</strong> Two vectors are perpendicular if their dot product is zero. The dot product of $\overrightarrow{d}$ and $\overrightarrow{n}$ is: $$ \overrightarrow{d} \cdot \mathbf{n} = (x)(-y) + (y)(x) = -xy + xy = 0 $$ Since the dot product is always zero, the vectors are always perpendicular! Notice how the value stays at `0.00` in the demo above, no matter how you move the points.</li></ul></div><script>(() => {
+			const canvas = document.getElementById("perp_normal_canvas");
+			const ctx = canvas.getContext("2d");
+			const info = document.getElementById("info");
+
+			// Starting points for the vector
+			let a = {
+				x: 150,
+				y: 200
+			};
+			let b = {
+				x: 450,
+				y: 200
+			};
+			let draggingPoint = null;
+
+			// Helper function to draw an arrow from (x1, y1) to (x2, y2)
+			function drawArrow(x1, y1, x2, y2, color) {
+				const headlen = 10;
+				const dx = x2 - x1;
+				const dy = y2 - y1;
+				const angle = Math.atan2(dy, dx);
+
+				ctx.strokeStyle = color;
+				ctx.fillStyle = color;
+				ctx.lineWidth = 2; // Made arrows a bit thicker
+
+				// Line part
+				ctx.beginPath();
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.stroke();
+
+				// Arrow head part
+				ctx.beginPath();
+				ctx.moveTo(x2, y2);
+				ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6),
+					y2 - headlen * Math.sin(angle - Math.PI / 6));
+				ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6),
+					y2 - headlen * Math.sin(angle + Math.PI / 6));
+				ctx.lineTo(x2, y2);
+				ctx.fill();
+			}
+
+			// Makes a vector have a length of 1
+			function normalize(v) {
+				const len = Math.hypot(v.x, v.y);
+				if (len === 0) return {
+					x: 0,
+					y: 0
+				}; // Avoid division by zero
+				return {
+					x: v.x / len,
+					y: v.y / len
+				};
+			}
+
+			// Main drawing function
+			function draw() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+				// Draw draggable points A and B
+				ctx.fillStyle = "white";
+				ctx.beginPath();
+				ctx.arc(a.x, a.y, 8, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.fillText("A", a.x - 20, a.y);
+
+				ctx.beginPath();
+				ctx.arc(b.x, b.y, 8, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.fillText("B", b.x + 10, b.y);
+
+
+				// Calculate the direction vector and normalize it (make its length 1)
+				const dirVector = {
+					x: b.x - a.x,
+					y: b.y - a.y
+				};
+				const d = normalize(dirVector);
+				drawArrow(a.x, a.y, a.x + d.x * 100, a.y + d.y * 100, "blue");
+
+				// Calculate the normal vector
+				// The 2D trick: swap components and negate one of them.
+				const n = {
+					x: -d.y,
+					y: d.x
+				};
+				drawArrow(a.x, a.y, a.x + n.x * 100, a.y + n.y * 100, "red");
+
+				// Calculate the dot product to prove they are perpendicular
+				const dotProduct = (d.x * n.x + d.y * n.y);
+				info.innerHTML = `
+  <b>Direction</b> $\\overrightarrow{d}$: (${d.x.toFixed(2)}, ${d.y.toFixed(2)}) |
+  <b>Normal</b> $\\overrightarrow{n}$: (${n.x.toFixed(2)}, ${n.y.toFixed(2)}) |
+  <b>Dot Product</b> $\\overrightarrow{d} \\cdot \\overrightarrow{n}$: ${dotProduct.toFixed(2)}
+`;
+				if (window.MathJax) {
+					MathJax.typeset(); // re-render LaTeX
+				}
+
+
+			}
+
+			// --- Event Listeners for Dragging ---
+			function getMousePos(e) {
+				const rect = canvas.getBoundingClientRect();
+				return {
+					x: e.clientX - rect.left,
+					y: e.clientY - rect.top
+				};
+			}
+
+			canvas.addEventListener("mousedown", e => {
+				const {
+					x,
+					y
+				} = getMousePos(e);
+				// Check if mouse is inside point A or B
+				if (Math.hypot(x - a.x, y - a.y) < 10) draggingPoint = a;
+				else if (Math.hypot(x - b.x, y - b.y) < 10) draggingPoint = b;
+			});
+
+			canvas.addEventListener("mousemove", e => {
+				if (draggingPoint) {
+					const {
+						x,
+						y
+					} = getMousePos(e);
+					draggingPoint.x = x;
+					draggingPoint.y = y;
+					draw();
+				}
+			});
+
+			canvas.addEventListener("mouseup", () => {
+				draggingPoint = null;
+			});
+
+			// Initial draw
+			draw();
+		})()</script></div><p> </p><h3>How will we use this in our line?</h3><p>To draw a line, we basically need three things: the start point $a$, the end point $b$, and the thickness (width) $w$. We also know that a quad is made of four vertices and six indices that connect these vertices in order to form a rectangle. That means our goal is to figure out four points that we can use as the quad’s vertices. Let’s go through the math step by step (already explained above in the interactive guide, but here are the details specific to our line):</p><h4>Step 1:</h4><p>First, we need the direction of the line: $$ \overrightarrow{d} = b - a = (b_x - a_x, b_y - a_y) $$ Then we normalize $\overrightarrow{d}$, because we only care about its direction (not its length). This avoids scaling issues.</p><h4>Step 2:</h4><p>Next, we calculate the <strong>perpendicular</strong> vector: $$ \overrightarrow{n} = (-d_y, d_x) $$ We do this by rotating the direction vector by $90^{\circ}$ to get a perpendicular vector.</p><h4>Step 3:</h4><p>Our normal vector $\overrightarrow{n}$ has length 1 (since we normalized $\overrightarrow{d}$). Now we scale it by $w / 2$.</p><p class="msg msg--info">Why divide by 2? Because we’ll be offsetting in both directions. This way, the distance between the two parallel edges of the quad will equal the full width $w$.</p><h4>Step 4:</h4><p>Finally, we compute the four vertex positions. For each point ($a$ and $b$), we create two vertices by moving the point along $\pm \overrightarrow{n}$:</p><p>$$ \begin{align*} v_0 &amp;= a + \overrightarrow{n} \\ v_1 &amp;= b + \overrightarrow{n} \\ v_2 &amp;= a - \overrightarrow{n} \\ v_3 &amp;= b - \overrightarrow{n} \end{align*} $$</p><p>These four vertices form a quad that represents our thick line.</p><div class="canvas-container" style="line-wrap: wrap;"><h4>Line showcase</h4><p>Drag the points A and B. Adjust the thickness to see how the quad is formed around the center line.</p><canvas id="lineCanvas" width="700" height="400"></canvas><div style="display: flex; gap: 10px; justify-content: center; align-items: center;"><label for="thickness">Thickness:</label> <input id="thickness" max="100" min="2" type="range" value="40"></div><div id="lineInfo" class="info-box"></div><script>(() => {
+			const canvas = document.getElementById("lineCanvas");
+			const ctx = canvas.getContext("2d");
+			const thicknessSlider = document.getElementById("thickness");
+			const info = document.getElementById("lineInfo");
+
+			let a = {
+				x: 150,
+				y: 200
+			};
+			let b = {
+				x: 450,
+				y: 200
+			};
+			let dragging = null;
+
+			// Function to draw an arrow
+			function drawArrow(x1, y1, x2, y2, color, headlen = 10, lineWidth = 2) {
+				const dx = x2 - x1;
+				const dy = y2 - y1;
+				const angle = Math.atan2(dy, dx);
+				ctx.strokeStyle = color;
+				ctx.fillStyle = color;
+				ctx.lineWidth = lineWidth;
+				ctx.beginPath();
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(x2, y2);
+				ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+				ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+				ctx.lineTo(x2, y2);
+				ctx.fill();
+			}
+
+			// Function to normalize a vector
+			function normalize(v) {
+				const len = Math.hypot(v.x, v.y);
+				return (len === 0) ? {
+					x: 0,
+					y: 0
+				} : {
+					x: v.x / len,
+					y: v.y / len
+				};
+			}
+
+			// Main drawing function
+			function draw() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				const w = parseFloat(thicknessSlider.value);
+
+				// Calculate vectors
+				const d_raw = {
+					x: b.x - a.x,
+					y: b.y - a.y
+				};
+				const d_normalized = normalize(d_raw);
+				const n_normalized = {
+					x: -d_normalized.y,
+					y: d_normalized.x
+				}; // Perpendicular to d
+				const n_scaled = {
+					x: n_normalized.x * w / 2,
+					y: n_normalized.y * w / 2
+				};
+
+				// Quad vertices
+				const v0 = {
+					x: a.x + n_scaled.x,
+					y: a.y + n_scaled.y
+				};
+				const v1 = {
+					x: b.x + n_scaled.x,
+					y: b.y + n_scaled.y
+				};
+				const v2 = {
+					x: a.x - n_scaled.x,
+					y: a.y - n_scaled.y
+				};
+				const v3 = {
+					x: b.x - n_scaled.x,
+					y: b.y - n_scaled.y
+				};
+
+				// Get colors from CSS variables
+				const primaryColor = "#00aaff";
+				const accentColor = "#ff4d4d";
+				const handleColor = "#f0f0f0";
+
+				 // --- Draw Direction Arrow (Blue) ---
+            // The length of the direction arrow is somewhat arbitrary, make it slightly longer than the points if visible
+            const arrowLength = Math.hypot(d_raw.x, d_raw.y) * 0.7; // 70% of the line length
+            drawArrow(a.x, a.y, a.x + d_normalized.x * arrowLength, a.y + d_normalized.y * arrowLength, primaryColor, 8, 1.5);
+
+
+            // --- Draw 1px center line (dashed gray) ---
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+
+            // --- Draw the Quad (semi-transparent blue with solid border) ---
+            ctx.setLineDash([]); // Reset line dash
+            ctx.fillStyle = `rgba(${parseInt(primaryColor.slice(1,3), 16)}, ${parseInt(primaryColor.slice(3,5), 16)}, ${parseInt(primaryColor.slice(5,7), 16)}, 0.2)`; // Dynamic transparency
+            ctx.strokeStyle = `rgba(${parseInt(primaryColor.slice(1,3), 16)}, ${parseInt(primaryColor.slice(3,5), 16)}, ${parseInt(primaryColor.slice(5,7), 16)}, 0.8)`; // Dynamic solid color
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(v0.x, v0.y);
+            ctx.lineTo(v1.x, v1.y);
+            ctx.lineTo(v3.x, v3.y);
+            ctx.lineTo(v2.x, v2.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // --- Draw Normal Vector Arrows (Red) ---
+            const mid = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+            drawArrow(mid.x, mid.y, mid.x + n_scaled.x, mid.y + n_scaled.y, accentColor, 8, 1.5);
+            ctx.setLineDash([5, 5]); // Dashed for the opposite side
+            drawArrow(mid.x, mid.y, mid.x - n_scaled.x, mid.y - n_scaled.y, accentColor, 8, 1.5);
+            ctx.setLineDash([]); // Reset for other drawings
+
+            // --- Draw Draggable Points and Labels ---
+            ctx.fillStyle = handleColor;
+            ctx.font = "13px sans-serif"; // Slightly smaller font
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            [a, b].forEach((p, i) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); // Smaller points
+                ctx.fill();
+                ctx.fillText(i === 0 ? "A" : "B", p.x, p.y - 16); // Adjusted label position
+            });
+
+				// --- Update Info Text ---
+				info.innerHTML = `
+                <b>Direction Vector</b>: (${d_normalized.x.toFixed(2)}, ${d_normalized.y.toFixed(2)})<br>
+                <b>Normalized Normal</b>: (${n_normalized.x.toFixed(2)}, ${n_normalized.y.toFixed(2)})<br>
+                <b>Thickness</b>: ${w.toFixed(0)} pixels
+            `;
+			}
+
+			// --- Event Handlers (Unchanged) ---
+			function getMousePos(e) {
+				const rect = canvas.getBoundingClientRect();
+				return {
+					x: e.clientX - rect.left,
+					y: e.clientY - rect.top
+				};
+			}
+
+			canvas.addEventListener("mousedown", e => {
+				const {
+					x,
+					y
+				} = getMousePos(e);
+				// Increased sensitivity for dragging points
+				if (Math.hypot(x - a.x, y - a.y) < 12) dragging = a;
+				else if (Math.hypot(x - b.x, y - b.y) < 12) dragging = b;
+			});
+
+			canvas.addEventListener("mousemove", e => {
+				if (dragging) {
+					const {
+						x,
+						y
+					} = getMousePos(e);
+					dragging.x = x;
+					dragging.y = y;
+					draw();
+				}
+			});
+
+			window.addEventListener("mouseup", () => dragging = null);
+			thicknessSlider.addEventListener("input", draw);
+
+			// Initial draw
+			draw();
+		})()</script></div><p> </p><h3>Implementation </h3><p>I will try to make the implementation as minimal as possible just for the showcase and as I said earlier that I will refactor my code at some point and add my local git repo to GitHub. </p><p>Anyways, Let's start with another two pairs <code>primitives.h</code> and <code>primitives.cpp</code></p><p><code>primitives.h</code></p><pre class="language-cpp"><code>#pragma once
+#include &lt;vector&gt;
+
+#include "Vertex.h"
+
+struct Line {
+    std::vector&lt;Vertex&gt; vertices;
+    std::vector&lt;int&gt; indices;
+};
+
+Line drawLine(Point p0, Point p1, int width, Color color);
+</code></pre><p>Let's now start implementing our <code>drawLine</code> function inside <code>primitives.cpp</code></p><pre class="language-cpp"><code>#include &lt;primitives.h&gt;
+
+Line drawLine(Point p0, Point p1, int width, Color color){
+    Line line;
+    line.vertices.resize(4);
+    line.indices.resize(6);
+   // Impl goes here
+    return line;
+}
+</code></pre><p>We resize vertices by four as we only have four vertices and indices by 6 as it requires 6 vertices to draw a quad (2 triangles)</p><p>We need to implement a new function called <code>normalize</code> to normalize our direction vector. Let's create a new header called <code>helpers.h</code></p><pre class="language-cpp"><code>#pragma once
+#include &lt;cmath&gt;
+
+inline Point normalize(const Point &amp;v) {
+    float len = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    if (len == 0.f) return {0.f, 0.f};
+    return {v.x / len, v.y / len};
+}
+</code></pre><p>Now, Let's calculate the direction and the normal vectors</p><pre class="language-cpp"><code>auto direction = normalize(p1 - p0);
+auto n = Point(-direction.y, direction.x);</code></pre><p>Now, we need to scale the normal vector with our width divided by </p><pre class="language-cpp"><code>n = n * (width / 2.0f);</code></pre><p>Now, it's time to calculate our vertices and add inside our vertices vector</p><pre class="language-apacheconf"><code>Point v0 = p0 + n;
+Point v1 = p1 + n;
+Point v2 = p0 - n;
+Point v3 = p1 - n;
+line.vertices[0] = {v0, color};
+line.vertices[1] = {v1, color};
+line.vertices[2] = {v2, color};
+line.vertices[3] = {v3, color};</code></pre><p>Last step would be add indices inside the vector</p><pre class="language-apacheconf"><code>//Triangle One
+line.indices[0] = 0;
+line.indices[1] = 1;
+line.indices[2] = 2;
+//Triangle Two
+line.indices[3] = 1;
+line.indices[4] = 2;
+line.indices[5] = 3;</code></pre><p> </p><p>Let's now use our line and draw it inside our <code>main.cpp</code></p><pre class="language-cpp"><code>while(running){
+        // Other stuff....
+        auto line = drawLine({50, 300}, {600, 600}, 10, {128, 128, 128, 255});
+        draw_indexed(pixels, width, height, line.vertices, line.indices, image);
+        // Other stuff....
+}</code></pre><p>If everything works as expected you should see this</p><figure class="post__image post__image--center"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/10/Screenshot-2025-09-13-195329.png" alt="" width="797" height="626" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/10/responsive/Screenshot-2025-09-13-195329-xs.png 300w, https://alielmorsy.github.io/media/posts/10/responsive/Screenshot-2025-09-13-195329-sm.png 480w, https://alielmorsy.github.io/media/posts/10/responsive/Screenshot-2025-09-13-195329-md.png 768w, https://alielmorsy.github.io/media/posts/10/responsive/Screenshot-2025-09-13-195329-lg.png 1024w"></figure></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on September 13, 2025</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/software-rasterizer-texturing/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  Software Rasterizer: Texturing "><span class="btn__icon">←</span> <span class="btn__text">Software Rasterizer: Texturing</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                images[i].classList.add('is-loaded');
+            } else {
+                images[i].addEventListener('load', function () {
+                    this.classList.add('is-loaded');
+                }, false);
+            }
+        }</script><script>window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};</script></body></html>

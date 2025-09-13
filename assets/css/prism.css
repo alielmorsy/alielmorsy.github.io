@@ -7,14 +7,15 @@ https://prismjs.com/download#themes=prism-dark&languages=markup+css+clike+javasc
  */
 
 code[class*="language-"],
-pre[class*="language-"] {
+pre[class*="language-"],
+.canvas-container
+{
 	color: white;
 	background: none;
 	text-shadow: 0 -.1em .2em black;
 	font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 	font-size: 1em;
 	text-align: left;
-	white-space: pre;
 	word-spacing: normal;
 	word-break: normal;
 	word-wrap: normal;
@@ -43,7 +44,8 @@ pre[class*="language-"],
 }
 
 /* Code blocks */
-pre[class*="language-"] {
+pre[class*="language-"],
+.canvas-container {
 	padding: 1em;
 	margin: .5em 0;
 	overflow: auto;
