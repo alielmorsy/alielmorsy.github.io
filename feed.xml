@@ -3,7 +3,7 @@
     <title>alielmorsy</title>
     <link href="https://alielmorsy.github.io/feed.xml" rel="self" />
     <link href="https://alielmorsy.github.io" />
-    <updated>2026-02-19T21:21:14+02:00</updated>
+    <updated>2026-02-19T22:59:25+02:00</updated>
     <author>
         <name>Ali Elmorsy</name>
     </author>
@@ -1391,7 +1391,7 @@ void RenderGraph::Reset(uint32_t frameIndex) {
 <li>Multi threading recording.</li>
 <li>Passes constraints (Force a pass to be executed after a specific pass)</li>
 </ol>
-<p class="msg msg--info">If you came so far that means you were interested but also asking a very important question, why did I build it this feature reach. And you are right, It's very complicated a lot of features for a solo dev but I like to build things perfectly with all possible features, I didn't lose any frames from upgrading and adding new features </p>
+<p class="msg msg--info">If you’ve come this far, it means you were interested and also asking an important question: why did I build it with this feature set? And you’re right, it’s very complicated. There are a lot of features for a solo developer, but I like to build things properly with all possible features. I didn’t lose any performance while upgrading and adding new ones.</p>
             ]]>
         </content>
     </entry>
