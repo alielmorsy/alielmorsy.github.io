@@ -3,7 +3,7 @@
     <title>alielmorsy</title>
     <link href="https://alielmorsy.github.io/feed.xml" rel="self" />
     <link href="https://alielmorsy.github.io" />
-    <updated>2026-02-19T22:59:25+02:00</updated>
+    <updated>2026-02-19T23:37:15+02:00</updated>
     <author>
         <name>Ali Elmorsy</name>
     </author>
@@ -100,14 +100,14 @@ private:
     std::vector&lt;std::pair&lt;RGHandle, AccessType&gt; &gt; _dependencies;
     
 };</code></pre>
-<p>It's a simple class with two functions:</p>
+<p>It's a simple class with three functions:</p>
 <ul>
-<li><code>CreateTexture</code>: A function that takes information about a texture like size, type, format, and name and return a handle of this function/</li>
-<li><code>FindTexture</code>: Finds an image that was created by another pass to be used in the current pass/</li>
-<li><code>AddDependency</code>: This function takes the texture that was created or define and define how should it be used for the pass like will it be/</li>
+<li><code>CreateTexture</code>: A function that takes information about a texture like size, type, format, and name and return a handle of this function.</li>
+<li><code>FindTexture</code>: Finds an image that was created by another pass to be used in the current pass.</li>
+<li><code>AddDependency</code>: This function takes the texture that was created or define and define how should it be used for the pass like will it be.</li>
 </ul>
 <p class="msg msg--highlight ">I know you may have so many questions, I promise I will try to answer them all but let's continue for now</p>
-<p>Let's define what is <strong>AccesType</strong>. As mentioned above, <strong>AccesType </strong>is a how the texture will be used, I won't define everything of course I will define three types to be used later in our example:</p>
+<p>Let's define what is <strong>AccesType</strong>. As mentioned above, <strong>AccesType </strong>is a how the texture will be used, I won't define everything of course rather I will define three types to be used later in our example:</p>
 <pre class="language-cpp"><code>enum class AccessType {
     ShaderRead, // Generic Read (defaults to ReadOnlyOptimal)
     ColorAttachmentWrite, // Generic Write (defaults to ColorAttachmentWrite)
