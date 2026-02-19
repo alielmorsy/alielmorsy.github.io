@@ -1,68 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
-    <title>alielmorsy</title>
-    <link href="https://alielmorsy.github.io/feed.xml" rel="self" />
-    <link href="https://alielmorsy.github.io" />
-    <updated>2026-02-19T21:21:14+02:00</updated>
-    <author>
-        <name>Ali Elmorsy</name>
-    </author>
-    <id>https://alielmorsy.github.io</id>
-
-    <entry>
-        <title>The Art of Render Graphs</title>
-        <author>
-            <name>Ali Elmorsy</name>
-        </author>
-        <link href="https://alielmorsy.github.io/the-art-of-render-graphs/"/>
-        <id>https://alielmorsy.github.io/the-art-of-render-graphs/</id>
-            <category term="vulkan "/>
-            <category term="RenderGraph"/>
-            <category term="Rasterization"/>
-
-        <updated>2026-02-18T23:25:39+02:00</updated>
-            <summary>
-                <![CDATA[
-                    While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have&hellip;
-                ]]>
-            </summary>
-        <content type="html">
-            <![CDATA[
-                <p>While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have too many operations to perform that are surprisingly unrelated to each other. For example, you need a pass to create shadows, another pass to render objects using the created shadow maps, and a pass to render your UI from ImGui.</p>
-<p>You may say that's not an issue; it's like three different functions, easy. Between these calls, I can just transition images as needed, right? Well, that will work, of course. After all, those are simple three passes. <span style="color: var(--text-primary-color); font-family: var(--editor-font-family); font-size: inherit; font-weight: var(--font-weight-normal);">But, what if I just decided to add another pass, like a post-processing pass, which must be added before the UI? (Of course, we don't want the post-processing to happen on our UI components!). </span></p>
-<p class="msg msg--highlight ">If you didn't discover the issue yet, It's now you have do a special transition between the render and post processing and another one from post processing to UI. </p>
-<p>And this is where we need to introduce an automated way to seamlessly add passes anywhere and in any order, while letting the system sort them correctly. We simply declare that shadows must be rendered before objects because the object pass depends on the shadow data, and the render graph takes care of the rest.</p>
-<p>On top of that, the system should be able to cull passes that are not actually used. For example, if shadows are disabled in the scene, it makes no sense to generate or even request a shadow map texture. That entire pass should be removed automatically.</p>
-<p>You could, of course, choose to not add the shadow pass at all while building the render graph. However, if every pass has to manually check whether all of its inputs are enabled or valid, you quickly end up with countless conditional checks scattered across the frame code. Render graphs solve this by allowing you to describe dependencies explicitly and let the graph compiler handle ordering and culling for you.</p>
-<p> </p>
-<p>In this post, I will be using Vulkan because I stumbled the issue of passes while building a game engine.</p>
-<p class="msg msg--highlight ">When I started learning about game engines, everyone I told about render graphs told me I didn't need them. That made me want to do it even more, and I don't regret it. That taught me a great feature and made implementing things like tiled culling very easy. I just define things, and most of the hard logic is automatically generated.</p>
-<p> </p>
-<p>But why a <strong>graph</strong>? Let's write a formal definition of the render graph: A render graph is a directed acyclic graph (DAG) where each node represents a rendering pass, and edges represent resource dependencies between passes.</p>
-<p><br data-start="920" data-end="923">Passes do not perform transitions, allocation, or synchronization themselves. Instead, they describe <em data-start="1026" data-end="1052">what they read and write</em>, and the graph compiler derives execution order, resource lifetimes, and barriers.</p>
-<figure class="post__image"><img loading="lazy"  src="https://alielmorsy.github.io/media/posts/11/render_graph.png" alt="" width="787" height="203" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/11/responsive/render_graph-xs.png 300w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-sm.png 480w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-md.png 768w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-lg.png 1024w"></figure>
-<p>I hope this image make things understandable. If not we are going through it.</p>
-<ul>
-<li>Squares define passes</li>
-<li>Arrows define direction from Pass A to Pass B</li>
-<li>non connected passes means they have been culled therefore they won't be executed</li>
-</ul>
-<p>Another question would be why all this complexity? Like won't just a simple tracing would work why graphs,...etc. I didn't understand the answer till I remembered unity render passes structure. </p>
-<p>You see we have two different of passes:</p>
-<ol>
-<li><strong>Engine passes</strong>: Passes that's essential for engine like gbuffer, shadow, skybox, culling,...etc.</li>
-<li><strong>Game Passes</strong>: Like custom post processing, special work that should be done in a render pass,..etc. 
-<ul>
-<li>The thing about game passes they will be always added after engine passes.</li>
-<li>For example, I want to add a post processing for skybox only that means this should happen before lit pass. Therefore, we need also constrain to tell it to be exactly where it should be</li>
-</ul>
-</li>
-</ol>
-<p>In my implementation of a render graph I decided as I mentioned earlier I will make it support reordering. I felt like that's the right way to do it because in a real game you may have tens of render passes defining them in order may not be always right. The ordering part typically optional.</p>
-<p>Now, Let's head into implementation, I decided to start with class based passes I felt like I love it like this then I made a compatible layer of function passes.</p>
-<p> </p>
-<p>Let's start with <code>RenderPass.h</code> which is an abstract class all render passes should be based on it:</p>
-<pre class="language-cpp"><code>class RenderPass {
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Art of Render Graphs - alielmorsy</title><meta name="description" content="While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><link rel="canonical" href="https://alielmorsy.github.io/the-art-of-render-graphs/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="The Art of Render Graphs"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/the-art-of-render-graphs/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/the-art-of-render-graphs/"},"headline":"The Art of Render Graphs","datePublished":"2026-02-18T23:25+02:00","dateModified":"2026-02-19T21:21+02:00","description":"While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+                    opacity: 1;
+                }</style></noscript><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=0d8f74e30dc86a895725a07311c4e87c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">The Art of Render Graphs</h1><div class="post__meta"><time datetime="2026-02-18T23:25" class="post__date">February 18, 2026 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div><div class="post__tags"><a href="https://alielmorsy.github.io/tags/rasterization/" class="invert">Rasterization</a> <a href="https://alielmorsy.github.io/tags/rendergraph/" class="invert">RenderGraph</a> <a href="https://alielmorsy.github.io/tags/vulkan/" class="invert">vulkan</a></div></header><div class="post__entry"><p>While building a game engine (especially when using modern graphics APIs like Vulkan or DirectX), you will definitely stumble upon an annoying issue. You have too many operations to perform that are surprisingly unrelated to each other. For example, you need a pass to create shadows, another pass to render objects using the created shadow maps, and a pass to render your UI from ImGui.</p><p>You may say that's not an issue; it's like three different functions, easy. Between these calls, I can just transition images as needed, right? Well, that will work, of course. After all, those are simple three passes. <span style="color: var(--text-primary-color); font-family: var(--editor-font-family); font-size: inherit; font-weight: var(--font-weight-normal);">But, what if I just decided to add another pass, like a post-processing pass, which must be added before the UI? (Of course, we don't want the post-processing to happen on our UI components!). </span></p><p class="msg msg--highlight">If you didn't discover the issue yet, It's now you have do a special transition between the render and post processing and another one from post processing to UI. </p><p>And this is where we need to introduce an automated way to seamlessly add passes anywhere and in any order, while letting the system sort them correctly. We simply declare that shadows must be rendered before objects because the object pass depends on the shadow data, and the render graph takes care of the rest.</p><p>On top of that, the system should be able to cull passes that are not actually used. For example, if shadows are disabled in the scene, it makes no sense to generate or even request a shadow map texture. That entire pass should be removed automatically.</p><p>You could, of course, choose to not add the shadow pass at all while building the render graph. However, if every pass has to manually check whether all of its inputs are enabled or valid, you quickly end up with countless conditional checks scattered across the frame code. Render graphs solve this by allowing you to describe dependencies explicitly and let the graph compiler handle ordering and culling for you.</p><p> </p><p>In this post, I will be using Vulkan because I stumbled the issue of passes while building a game engine.</p><p class="msg msg--highlight">When I started learning about game engines, everyone I told about render graphs told me I didn't need them. That made me want to do it even more, and I don't regret it. That taught me a great feature and made implementing things like tiled culling very easy. I just define things, and most of the hard logic is automatically generated.</p><p> </p><p>But why a <strong>graph</strong>? Let's write a formal definition of the render graph: A render graph is a directed acyclic graph (DAG) where each node represents a rendering pass, and edges represent resource dependencies between passes.</p><p><br data-start="920" data-end="923">Passes do not perform transitions, allocation, or synchronization themselves. Instead, they describe <em data-start="1026" data-end="1052">what they read and write</em>, and the graph compiler derives execution order, resource lifetimes, and barriers.</p><figure class="post__image"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/11/render_graph.png" alt="" width="787" height="203" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/11/responsive/render_graph-xs.png 300w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-sm.png 480w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-md.png 768w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-lg.png 1024w"></figure><p>I hope this image make things understandable. If not we are going through it.</p><ul><li>Squares define passes</li><li>Arrows define direction from Pass A to Pass B</li><li>non connected passes means they have been culled therefore they won't be executed</li></ul><p>Another question would be why all this complexity? Like won't just a simple tracing would work why graphs,...etc. I didn't understand the answer till I remembered unity render passes structure. </p><p>You see we have two different of passes:</p><ol><li><strong>Engine passes</strong>: Passes that's essential for engine like gbuffer, shadow, skybox, culling,...etc.</li><li><strong>Game Passes</strong>: Like custom post processing, special work that should be done in a render pass,..etc. <ul><li>The thing about game passes they will be always added after engine passes.</li><li>For example, I want to add a post processing for skybox only that means this should happen before lit pass. Therefore, we need also constrain to tell it to be exactly where it should be</li></ul></li></ol><p>In my implementation of a render graph I decided as I mentioned earlier I will make it support reordering. I felt like that's the right way to do it because in a real game you may have tens of render passes defining them in order may not be always right. The ordering part typically optional.</p><p>Now, Let's head into implementation, I decided to start with class based passes I felt like I love it like this then I made a compatible layer of function passes.</p><p> </p><p>Let's start with <code>RenderPass.h</code> which is an abstract class all render passes should be based on it:</p><pre class="language-cpp"><code>class RenderPass {
 public:
     explicit RenderPass(const std::string &amp;name) : _name(name) {
     }
@@ -81,14 +19,7 @@ public:
     }
 protected:
     std::string _name;
-};</code></pre>
-<p>Simple two functions:</p>
-<ul>
-<li><code>Setup</code>: which will define textures (definition and usages)</li>
-<li><code>Execute</code>: which execute needed operations inside the command buffer</li>
-</ul>
-<p>Let’s move on to the <strong data-path-to-node="2,0" data-index-in-node="22">Builder</strong>, which is a proxy class for the render graph. Its role is to create and import textures, and most importantly define their valid usage</p>
-<pre class="language-cpp"><code>class RenderGraphBuilder {
+};</code></pre><p>Simple two functions:</p><ul><li><code>Setup</code>: which will define textures (definition and usages)</li><li><code>Execute</code>: which execute needed operations inside the command buffer</li></ul><p>Let’s move on to the <strong data-path-to-node="2,0" data-index-in-node="22">Builder</strong>, which is a proxy class for the render graph. Its role is to create and import textures, and most importantly define their valid usage</p><pre class="language-cpp"><code>class RenderGraphBuilder {
 public:
     [[nodiscard]] RGHandle CreateTexture(const RGTextureDesc &amp;desc) const;
 
@@ -99,26 +30,12 @@ public:
 private:
     std::vector&lt;std::pair&lt;RGHandle, AccessType&gt; &gt; _dependencies;
     
-};</code></pre>
-<p>It's a simple class with two functions:</p>
-<ul>
-<li><code>CreateTexture</code>: A function that takes information about a texture like size, type, format, and name and return a handle of this function/</li>
-<li><code>FindTexture</code>: Finds an image that was created by another pass to be used in the current pass/</li>
-<li><code>AddDependency</code>: This function takes the texture that was created or define and define how should it be used for the pass like will it be/</li>
-</ul>
-<p class="msg msg--highlight ">I know you may have so many questions, I promise I will try to answer them all but let's continue for now</p>
-<p>Let's define what is <strong>AccesType</strong>. As mentioned above, <strong>AccesType </strong>is a how the texture will be used, I won't define everything of course I will define three types to be used later in our example:</p>
-<pre class="language-cpp"><code>enum class AccessType {
+};</code></pre><p>It's a simple class with two functions:</p><ul><li><code>CreateTexture</code>: A function that takes information about a texture like size, type, format, and name and return a handle of this function/</li><li><code>FindTexture</code>: Finds an image that was created by another pass to be used in the current pass/</li><li><code>AddDependency</code>: This function takes the texture that was created or define and define how should it be used for the pass like will it be/</li></ul><p class="msg msg--highlight">I know you may have so many questions, I promise I will try to answer them all but let's continue for now</p><p>Let's define what is <strong>AccesType</strong>. As mentioned above, <strong>AccesType </strong>is a how the texture will be used, I won't define everything of course I will define three types to be used later in our example:</p><pre class="language-cpp"><code>enum class AccessType {
     ShaderRead, // Generic Read (defaults to ReadOnlyOptimal)
     ColorAttachmentWrite, // Generic Write (defaults to ColorAttachmentWrite)
     ReadWrite, // Generic ReadWrite (defaults to General)
 
-};</code></pre>
-<p> </p>
-<p>Now, Let's start the real work. We will start simple a RenderGraph that can re order and cull. </p>
-<p>But first, Something that should be mentioned in my game engine I have a class called <code>ResourceManager</code> which responsible for defining and destroying textures. I won't look into that but keep that in mind because I will assume its defined for me as my render graph build its own textures inside and manage their lifetimes. The handle for resource manager textures called <code>RGResource</code></p>
-<p>Let's start by defining some needed structs:</p>
-<pre class="language-cpp"><code>struct RGHandle {
+};</code></pre><p> </p><p>Now, Let's start the real work. We will start simple a RenderGraph that can re order and cull. </p><p>But first, Something that should be mentioned in my game engine I have a class called <code>ResourceManager</code> which responsible for defining and destroying textures. I won't look into that but keep that in mind because I will assume its defined for me as my render graph build its own textures inside and manage their lifetimes. The handle for resource manager textures called <code>RGResource</code></p><p>Let's start by defining some needed structs:</p><pre class="language-cpp"><code>struct RGHandle {
         uint32_t id = UINT32_MAX;
         [[nodiscard]] bool IsValid() const noexcept { return id != UINT32_MAX; }
 };
@@ -131,15 +48,7 @@ struct PassDependency {
 struct CompiledPass {
     RenderPass *pass;
     std::vector&lt;vk::ImageMemoryBarrier2&gt; imageBarriers;
-};</code></pre>
-<p>Let's define what are these structs:</p>
-<ul>
-<li><code>RGHandle</code>: this is the handle that will be given to passe that represent. </li>
-<li><code>PassDependency</code>: This is a struct that holds the data from <code>AddDependency</code> function mentioned above.</li>
-<li><code>CompiledPass</code>: A struct holds the render the pass and needed image barriers to be executed before executing the pass itself to make sure images in the correct layout.</li>
-</ul>
-<p>Now, we have everything to start implementing the algorithm. We define a function called <code>Compile </code>that does the following:</p>
-<pre class="language-python"><code>def Compile():
+};</code></pre><p>Let's define what are these structs:</p><ul><li><code>RGHandle</code>: this is the handle that will be given to passe that represent. </li><li><code>PassDependency</code>: This is a struct that holds the data from <code>AddDependency</code> function mentioned above.</li><li><code>CompiledPass</code>: A struct holds the render the pass and needed image barriers to be executed before executing the pass itself to make sure images in the correct layout.</li></ul><p>Now, we have everything to start implementing the algorithm. We define a function called <code>Compile</code>that does the following:</p><pre class="language-python"><code>def Compile():
     # 1. DISCOVERY &amp; DEPENDENCY CAPTURE
     for pass in passes:
         # Run the developer's Setup function
@@ -199,12 +108,7 @@ struct CompiledPass {
             AllocatePhysicalTexture(resource.desc)
 
     # Generate Barriers, Topologically Sort the needed passes, and build Final Execution List
-    FinalizeCompiledGraph()</code></pre>
-<p>This is a simple overview of the algorithm itself. If you don't get it, don't worry we will cover each part on its own.</p>
-<h3>1- Setup Passes And Record Their Dependencies</h3>
-<p>We take the passes defined by the user and run their setup functions. This gives us a vector that represents all resources. For each resource, we store a list of passes that use it. Each entry in that list is a pair containing the pass index and the type of access that pass needs.</p>
-<p>This how the function would look like:</p>
-<pre class="language-cpp"><code>void RenderGraph::setupPassesAndRecordDependencies(
+    FinalizeCompiledGraph()</code></pre><p>This is a simple overview of the algorithm itself. If you don't get it, don't worry we will cover each part on its own.</p><h3>1- Setup Passes And Record Their Dependencies</h3><p>We take the passes defined by the user and run their setup functions. This gives us a vector that represents all resources. For each resource, we store a list of passes that use it. Each entry in that list is a pair containing the pass index and the type of access that pass needs.</p><p>This how the function would look like:</p><pre class="language-cpp"><code>void RenderGraph::setupPassesAndRecordDependencies(
     std::vector&lt;std::vector&lt;std::pair&lt;uint32_t, AccessType&gt; &gt; &gt; &amp;resourceTouchList) {
     const auto passCount = static_cast&lt;uint32_t&gt;(_passes.size());
     _passDeps.assign(passCount, {});
@@ -226,12 +130,7 @@ struct CompiledPass {
             _passDeps[p].push_back({handle, accessType});
         }
     }
-}</code></pre>
-<p> </p>
-<h3>2- Compute The Life Time of a Resource</h3>
-<p>This step is vital for the way I’ve set things up. When you ask the graph to create a texture, creating it right away is inefficient. That pass might end up being culled, and by waiting, we can facilitate texture reuse (aliasing) throughout the frame.</p>
-<p>So, this step does the following, For each resource we check the touch list that was created from the first step and we figure out when the first time they got used and when the last time</p>
-<pre class="language-cpp"><code>void RenderGraph::computeResourceLifetimes(
+}</code></pre><p> </p><h3>2- Compute The Life Time of a Resource</h3><p>This step is vital for the way I’ve set things up. When you ask the graph to create a texture, creating it right away is inefficient. That pass might end up being culled, and by waiting, we can facilitate texture reuse (aliasing) throughout the frame.</p><p>So, this step does the following, For each resource we check the touch list that was created from the first step and we figure out when the first time they got used and when the last time</p><pre class="language-cpp"><code>void RenderGraph::computeResourceLifetimes(
     const std::vector&lt;std::vector&lt;std::pair&lt;uint32_t, AccessType&gt; &gt; &gt; &amp;resourceTouchList) {
     const uint32_t resCount = static_cast&lt;uint32_t&gt;(_resources.size());
     _resourceFirstUse.assign(resCount, UINT32_MAX);
@@ -248,13 +147,7 @@ struct CompiledPass {
         _resourceLastUse[r] = last;
     }
 }
-</code></pre>
-<p> </p>
-<h3>3- Building The Graph</h3>
-<p>In this step we take all these passes and add them to the graph as edges and resources become the connectivity between those edge</p>
-<figure class="post__image"><img loading="lazy"  src="https://alielmorsy.github.io/media/posts/11/render_graph-2.png" alt="" width="787" height="203" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-xs.png 300w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-sm.png 480w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-md.png 768w ,https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-lg.png 1024w"></figure>
-<p>This is how the code works and will explain it live :)</p>
-<pre class="language-cpp"><code>void RenderGraph::buildAdjacencyGraph(
+</code></pre><p> </p><h3>3- Building The Graph</h3><p>In this step we take all these passes and add them to the graph as edges and resources become the connectivity between those edge</p><figure class="post__image"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/11/render_graph-2.png" alt="" width="787" height="203" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-xs.png 300w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-sm.png 480w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-md.png 768w, https://alielmorsy.github.io/media/posts/11/responsive/render_graph-2-lg.png 1024w"></figure><p>This is how the code works and will explain it live :)</p><pre class="language-cpp"><code>void RenderGraph::buildAdjacencyGraph(
     const std::vector&lt;std::vector&lt;std::pair&lt;uint32_t, AccessType&gt; &gt; &gt; &amp;resourceTouchList,
     std::vector&lt;std::unordered_set&lt;uint32_t&gt; &gt; &amp;adj, std::vector&lt;uint32_t&gt; &amp;indeg) {
     const uint32_t resCount = static_cast&lt;uint32_t&gt;(_resources.size());
@@ -308,19 +201,7 @@ struct CompiledPass {
             }
         }
     }
-}</code></pre>
-<p class="msg msg--info"><code>transient</code> means this image has been created inside the graph while <code>imported</code>means this image has been persisted to the graph from outside like swapchain images for example</p>
-<p>We loop over resources and for each resource we check its touch list and build graph accroding to these rules:</p>
-<ul>
-<li>Read → Write: If pass <strong>A</strong> writes to a texture and pass <strong>B</strong> reads it, we create an edge <strong>A → B</strong> is created.</li>
-<li>Write → Write: If pass <strong>B</strong> writes to a texture and also pass <strong>A</strong> write to it, we keep order to avoid race condition <strong>B → A.</strong></li>
-<li>Read → Read: If both passes <strong>A &amp; B </strong>are read only we ignore this iteration as no dependency between them and they are executed in the given order.</li>
-</ul>
-<p>There is a special case which is reordering passes because they were added out of order. For transient textures if pass <strong>A </strong>was defined before pass <strong>B</strong> while pass <strong>B</strong> writes to an image and pass <strong>A</strong> reads from it. Order is wrong in this case and the algorithm will re order them to be <strong>B → A</strong>.</p>
-<p> </p>
-<h3>4- Pass Culling</h3>
-<p>As mentioned earlier how important culling is as it makes the code readable by making small tweaks you just decide how the frame would look like. But, How can we really cull a pass? Let's have a look first in the code</p>
-<pre class="language-cpp"><code>std::vector&lt;bool&gt; RenderGraph::cullPasses(
+}</code></pre><p class="msg msg--info"><code>transient</code> means this image has been created inside the graph while <code>imported</code>means this image has been persisted to the graph from outside like swapchain images for example</p><p>We loop over resources and for each resource we check its touch list and build graph accroding to these rules:</p><ul><li>Read → Write: If pass <strong>A</strong> writes to a texture and pass <strong>B</strong> reads it, we create an edge <strong>A → B</strong> is created.</li><li>Write → Write: If pass <strong>B</strong> writes to a texture and also pass <strong>A</strong> write to it, we keep order to avoid race condition <strong>B → A.</strong></li><li>Read → Read: If both passes <strong>A &amp; B </strong>are read only we ignore this iteration as no dependency between them and they are executed in the given order.</li></ul><p>There is a special case which is reordering passes because they were added out of order. For transient textures if pass <strong>A </strong>was defined before pass <strong>B</strong> while pass <strong>B</strong> writes to an image and pass <strong>A</strong> reads from it. Order is wrong in this case and the algorithm will re order them to be <strong>B → A</strong>.</p><p> </p><h3>4- Pass Culling</h3><p>As mentioned earlier how important culling is as it makes the code readable by making small tweaks you just decide how the frame would look like. But, How can we really cull a pass? Let's have a look first in the code</p><pre class="language-cpp"><code>std::vector&lt;bool&gt; RenderGraph::cullPasses(
     const std::vector&lt;std::vector&lt;std::pair&lt;uint32_t, AccessType&gt; &gt; &gt; &amp;resourceTouchList) {
     const auto passCount = static_cast&lt;uint32_t&gt;(_passes.size());
     std::vector&lt;bool&gt; needed(passCount, false);
@@ -407,20 +288,7 @@ struct CompiledPass {
 
     return needed;
 }
-</code></pre>
-<p>The algorithm works by building Consumer → Producer map. For each resource, it tracks which pass wrote it to it last (Producer). If any other pass reads this resource, the algorithm marks it as a Reader (Consumer) that depends on the last writer (Producer).</p>
-<p>Some passes must be treated differently or we call them <strong>Root</strong>. Two cases where passes treated as roots:</p>
-<ol>
-<li>Has a side effect, its a virtual function defined inside RenderPass. If it returns true, It means this is a necessary pass.</li>
-<li>Writes to an imported image, If  there is pass that's writing to an imported image . For example, you are building a pass to render a second camera to an image rather than for screen. This pass must be treated as a root.</li>
-</ol>
-<p>Once we identify all our roots, the algorithm works backward using BFS to mark passes this way: If pass <strong>A </strong>is needed, and pass <strong>A</strong> depends on pass <strong>B</strong>, then pass <strong>B</strong> is also needed.</p>
-<p>The return from this function is a vector of bools where each index represent  if a pass is needed or not</p>
-<p> </p>
-<h3>3- Topologically Sort The Remaining Passes (Kahn’s Algorithm)</h3>
-<p>In this step, we determine the valid execution sequence for all needed passes. This happens to ensure a pass is executed only when all its dependencies are executed already.</p>
-<p>The code for it is kinda simple</p>
-<pre class="language-cpp"><code>void RenderGraph::buildTopologicalOrder(const std::vector&lt;bool&gt; &amp;needed,
+</code></pre><p>The algorithm works by building Consumer → Producer map. For each resource, it tracks which pass wrote it to it last (Producer). If any other pass reads this resource, the algorithm marks it as a Reader (Consumer) that depends on the last writer (Producer).</p><p>Some passes must be treated differently or we call them <strong>Root</strong>. Two cases where passes treated as roots:</p><ol><li>Has a side effect, its a virtual function defined inside RenderPass. If it returns true, It means this is a necessary pass.</li><li>Writes to an imported image, If  there is pass that's writing to an imported image . For example, you are building a pass to render a second camera to an image rather than for screen. This pass must be treated as a root.</li></ol><p>Once we identify all our roots, the algorithm works backward using BFS to mark passes this way: If pass <strong>A </strong>is needed, and pass <strong>A</strong> depends on pass <strong>B</strong>, then pass <strong>B</strong> is also needed.</p><p>The return from this function is a vector of bools where each index represent  if a pass is needed or not</p><p> </p><h3>3- Topologically Sort The Remaining Passes (Kahn’s Algorithm)</h3><p>In this step, we determine the valid execution sequence for all needed passes. This happens to ensure a pass is executed only when all its dependencies are executed already.</p><p>The code for it is kinda simple</p><pre class="language-cpp"><code>void RenderGraph::buildTopologicalOrder(const std::vector&lt;bool&gt; &amp;needed,
                                         const std::vector&lt;std::unordered_set&lt;uint32_t&gt; &gt; &amp;adj,
                                         std::vector&lt;uint32_t&gt; &amp;indeg) {
     const uint32_t passCount = static_cast&lt;uint32_t&gt;(_passes.size());
@@ -448,11 +316,7 @@ struct CompiledPass {
 
     size_t neededCount = std::ranges::count(needed, true);
     ASSERT_EX(_passOrder.size() == neededCount &amp;&amp; "Cycle detected in passes");
-}</code></pre>
-<p>We start the loop from leafs (only needed leafs). For each leaf, we basically “peel” it off the graph and add it to the final execution timeline. As we do that, we let any passes that were waiting on this leaf know by decrementing their dependency count. When a pass’s count drops to zero, it means all its inputs are ready at that point, it becomes a new leaf and gets pushed onto the queue.</p>
-<p> </p>
-<p>These are the most important and the hardest steps so far in a render graph. The remaining steps so far is allocating textures and building barriers. This is my full code</p>
-<pre class="language-cpp"><code>#include &lt;unordered_set&gt;
+}</code></pre><p>We start the loop from leafs (only needed leafs). For each leaf, we basically “peel” it off the graph and add it to the final execution timeline. As we do that, we let any passes that were waiting on this leaf know by decrementing their dependency count. When a pass’s count drops to zero, it means all its inputs are ready at that point, it becomes a new leaf and gets pushed onto the queue.</p><p> </p><p>These are the most important and the hardest steps so far in a render graph. The remaining steps so far is allocating textures and building barriers. This is my full code</p><pre class="language-cpp"><code>#include &lt;unordered_set&gt;
 #include &lt;rendering/RenderGraph.h&gt;
 #include &lt;rendering/RenderContext.h&gt;
 #include &lt;rendering/Renderer.h&gt;
@@ -1382,17 +1246,21 @@ void RenderGraph::Reset(uint32_t frameIndex) {
     _passDeps.clear();
     _barriersPerPass.clear();
 }
-</code></pre>
-<p> </p>
-<p>It supports the following:</p>
-<ol>
-<li>Define textures per frame in flight.</li>
-<li>Reusage textures in the same frame if they match to avoid double allocations.</li>
-<li>Multi threading recording.</li>
-<li>Passes constraints (Force a pass to be executed after a specific pass)</li>
-</ol>
-<p class="msg msg--info">If you came so far that means you were interested but also asking a very important question, why did I build it this feature reach. And you are right, It's very complicated a lot of features for a solo dev but I like to build things perfectly with all possible features, I didn't lose any frames from upgrading and adding new features </p>
-            ]]>
-        </content>
-    </entry>
-</feed>
+</code></pre><p> </p><p>It supports the following:</p><ol><li>Define textures per frame in flight.</li><li>Reusage textures in the same frame if they match to avoid double allocations.</li><li>Multi threading recording.</li><li>Passes constraints (Force a pass to be executed after a specific pass)</li></ol><p class="msg msg--info">If you came so far that means you were interested but also asking a very important question, why did I build it this feature reach. And you are right, It's very complicated a lot of features for a solo dev but I like to build things perfectly with all possible features, I didn't lose any frames from upgrading and adding new features </p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on February 19, 2026</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/software-rasterization-primitives-i/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  Software Rasterization: Primitives I "><span class="btn__icon">←</span> <span class="btn__text">Software Rasterization: Primitives I</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                images[i].classList.add('is-loaded');
+            } else {
+                images[i].addEventListener('load', function () {
+                    this.classList.add('is-loaded');
+                }, false);
+            }
+        }</script><script>window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};</script></body></html>
