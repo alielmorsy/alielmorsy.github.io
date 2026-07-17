@@ -1,0 +1,638 @@
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>How to build UI Elements (Part 1 Rectangles) - alielmorsy</title><meta name="description" content="Building a UI library is one of the hardest topics I have ever gone into. I mean, writing a function that shows a square and&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><script type="text/javascript" async src="https://www.googletagmanager.com/gtag/js?id=G-95HF07BQWM"></script><script type="text/javascript">window.dataLayer = window.dataLayer || [];
+				  function gtag(){dataLayer.push(arguments);}
+				  gtag('js', new Date());
+				  gtag('config', 'G-95HF07BQWM' , { 'anonymize_ip': true });</script><link rel="canonical" href="https://alielmorsy.github.io/how-to-build-ui-elements/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="How to build UI Elements (Part 1 Rectangles)"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="Building a UI library is one of the hardest topics I have ever gone into. I mean, writing a function that shows a square and&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/how-to-build-ui-elements/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/how-to-build-ui-elements/"},"headline":"How to build UI Elements (Part 1 Rectangles)","datePublished":"2026-07-15T16:21+03:00","dateModified":"2026-07-17T20:50+03:00","description":"Building a UI library is one of the hardest topics I have ever gone into. I mean, writing a function that shows a square and&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+                    opacity: 1;
+                }</style></noscript><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=0d8f74e30dc86a895725a07311c4e87c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">How to build UI Elements (Part 1 Rectangles)</h1><div class="post__meta"><time datetime="2026-07-15T16:21" class="post__date">July 15, 2026 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div><div class="post__tags"><a href="https://alielmorsy.github.io/tags/antialiasing/" class="invert">AntiAliasing </a><a href="https://alielmorsy.github.io/tags/rendering/" class="invert">Rendering </a><a href="https://alielmorsy.github.io/tags/sdf/" class="invert">SDF</a> <a href="https://alielmorsy.github.io/tags/ui/" class="invert">UI</a></div></header><div class="post__entry"><p> </p><div class="article"><p>Building a UI library is one of the hardest topics I have ever gone into. I mean, writing a function that shows a square and makes it clickable is not that hard. I am talking about something much bigger: rendering text, making buttons look genuinely good, supporting rounded corners, and much, much more.</p><p>What I will be talking about in this article is GPU rendering. Software rendering is a hell of a subject, and to be honest, I never actually finished my software rasterizer. Since we are mainly talking about a UI framework for games here, GPU rendering is the way to go.</p><h2>Rectangles</h2><p>Rectangles are the foundational building blocks of any UI, from buttons to containers (panels). On paper, drawing a rectangle and coloring it is dead simple: you just submit a quad and give it a color.</p><p>But in a real UI, that is almost never all you want. You need to support rotation and scaling. You need rounded corners (border radius). And on top of all that, you have to deal with the silent killer of clean UI: aliasing. If your rotated or rounded quads look like jagged, pixelated stairs, the illusion of a polished interface is immediately ruined.</p><p class="msg msg--highlight">We can obviously use MSAA for anti-aliasing, but that would be overkill. Imagine rendering the same rectangle, with all its logic like rounded corners, borders, etc., four times. (Assuming MSAA 4x)</p><p>Let's start with the simplest thing after rendering a quad: rounding. For rounding, I decided to use the famous <strong>Inigo Quilez</strong> SDF rounded box method.</p><p>Here is what the function looks like:</p><pre class="language-glsl"><code>float sdRoundedBox(float2 p, float2 half, float r) {
+    r = min(r, min(half.x, half.y));
+    float2 q = abs(p) - half + r;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+}</code></pre><p>At first glance, especially if you are not familiar with SDFs, you would say WTF! So let's walk through it slowly together.</p><p>The function accepts three parameters:</p><ul><li><code>p</code>: the point to test. In our case it will be the UV coordinate of the quad (we will talk about it a bit later).</li><li><code>half</code>: half of the rectangle size.</li><li><code>r</code>: the corner radius you want to use.</li></ul><p>The first thing the code does is clamp the radius to prevent it from turning inside out. Meaning, if the user mistakenly uses a radius bigger than the actual size of the rectangle, we clamp it, which would eventually make it a circle.</p><pre class="language-glsl"><code>float2 q = abs(p) - half + r;</code></pre><h3>1. Mirroring the Quadrants</h3><p>By taking the absolute value of the test point (the UV in our case), we are basically folding all of 2D space into the top-right area. No matter where our pixel is, it will always fold to the top-right area. But why? Because that makes writing our math easier: we write it for one corner instead of special handling for every corner. So basically, <code>q</code> is a mapped point of <code>p</code>.</p><h3>2. Shrinking the Box Core</h3><p>How about subtracting <code>half</code>? We said earlier that <code>half</code> is simply the rectangle's half-size. We subtract it to move the rectangle's edge to zero. In other words, we have <code>q</code>, our new test point for the top-right corner, but instead of measuring it from the rectangle's center, we're now measuring it relative to the rectangle's edge.</p><p>This makes the math much easier. If <code>q</code> is negative, the point is still inside the rectangle. If it's zero, the point lies exactly on the edge. If it's positive, the point has moved outside the rectangle.</p><p>Now let's bring the corner radius back in:</p><p>Adding <code>r</code> after subtracting <code>half</code> is equivalent to subtracting a <strong>smaller</strong> half-size (<code>half - r</code>). In other words, we're temporarily pretending the rectangle is a little smaller on every side.</p><p>Why do this? Because calculating the distance to a sharp-cornered rectangle is simple. Once we have found that distance, we can expand the shape back outward by the same radius. That expansion naturally rounds the corners, producing the final rounded rectangle without needing separate math for straight edges and curved corners.</p><h3>3. Stitching It All Together</h3><p>Now for the line that scares everyone:</p><pre class="language-glsl"><code>return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;</code></pre><p>Relax. It looks like a mess, but it is really just two pieces glued into one formula: one piece for when the point is outside the box, and one piece for when it is inside. Then a final touch at the end to round everything.</p><p>Let's take the outside piece first: <code>length(max(q, 0.0))</code>. Remember that <code>q</code> is our point measured from the corner of the shrunken box. If the point is outside, at least one of <code>q.x</code> or <code>q.y</code> is positive. The <code>max(q, 0.0)</code> throws away anything negative and keeps only the positive part. So if you are outside along one edge, it kills the other axis and you get the straight perpendicular distance to that edge. If you are outside near the corner, both stay positive and <code>length</code> gives you the real diagonal distance to the corner. And if you are fully inside, both components are negative, <code>max</code> turns them into zero, and <code>length</code> becomes zero. So this whole piece is the distance when you are outside, and nothing when you are inside.</p><p>Now the inside piece: <code>min(max(q.x, q.y), 0.0)</code>. When you are inside the box, both <code>q.x</code> and <code>q.y</code> are negative, and <code>max(q.x, q.y)</code> picks the one closest to an edge (the least negative one). That is exactly how far you are from the nearest edge, as a negative number. The <code>min(..., 0.0)</code> is just a switch: the moment you step outside, this piece becomes zero and gets out of the way so it does not fight with the outside piece.</p><p>Notice how the two pieces never fire at the same time. Outside, the first piece is zero and the second one does the work. Inside, the second piece is zero and the first one does the work. Add them together and you get one clean signed distance: negative inside, zero on the edge, positive outside. That is the whole point of an SDF.</p><p>And the last bit, <code>- r</code>? That is the promise we made back in the shrinking step. We measured the distance to the smaller, sharp-cornered box. Subtracting <code>r</code> pushes the whole surface outward by <code>r</code> in every direction. Pushing a sharp corner outward by a fixed amount is literally what draws a quarter circle, so the corners round themselves for free. No special case for edges, no special case for corners. One formula.</p><p>Once you have this signed distance, the rest is dead simple: negative means inside the shape so we shade the pixel, positive means outside so we drop it, and that thin band right around zero is exactly where we get to do smooth anti-aliasing. Play with the visualizer below and watch the readout. The <code>outside</code> row is the <code>length(max(q, 0.0))</code> piece, the <code>inside</code> row is the <code>min(max(q.x, q.y), 0.0)</code> piece, and <code>d</code> is what you get after adding them and subtracting <code>r</code>.</p><div id="rrsdf" class="rrsdf"><div class="rrsdf-head"><span class="rrsdf-eq">q = abs(p) - half + r</span> <span class="rrsdf-tag">[ signed distance field ]</span></div><div class="rrsdf-body"><div class="rrsdf-stage"><canvas id="rrsdfCanvas"></canvas><div id="rrsdfHint" class="rrsdf-hint">move over the field to test point p</div></div><div class="rrsdf-panel"><div><span class="rrsdf-seg-label">visualize</span><div class="rrsdf-modes" role="group" aria-label="Visualization step"><button class="rrsdf-mode" data-mode="symmetry" aria-pressed="true"><span class="mk">[*]</span><span class="lbl">1. Symmetry &amp; Folding Space (abs(p))</span></button> <button class="rrsdf-mode" data-mode="shrinking" aria-pressed="false"><span class="mk">[ ]</span><span class="lbl">2. Shrunken Core (-half + r)</span></button></div></div><div class="rrsdf-sliders"><div class="rrsdf-slider"><label for="rrsdfHx">half.x<span id="rrsdfHxVal" class="val">120</span></label><input id="rrsdfHx" max="180" min="60" type="range" value="120"></div><div class="rrsdf-slider"><label for="rrsdfHy">half.y<span id="rrsdfHyVal" class="val">90</span></label><input id="rrsdfHy" max="180" min="60" type="range" value="90"></div><div class="rrsdf-slider"><label for="rrsdfR">r<span id="rrsdfRVal" class="val">30</span></label><input id="rrsdfR" max="90" min="0" type="range" value="30"></div></div><div class="rrsdf-readout"><div class="row"><span class="rk">p</span><span id="rrsdfP" class="rv">-</span></div><div class="row"><span class="rk">abs(p)</span><span id="rrsdfAbs" class="rv">-</span></div><div class="row"><span class="rk">q</span><span id="rrsdfQ" class="rv">-</span></div><div class="row"><span class="rk">outside</span><span id="rrsdfExt" class="rv">-</span></div><div class="row"><span class="rk">inside</span><span id="rrsdfInt" class="rv">-</span></div><div class="row"><span class="rk">d (sdf)</span><span id="rrsdfD" class="rv">-</span></div><div class="rrsdf-status"><span id="rrsdfStatus">&gt; hover the field</span></div></div></div></div></div><script>(function() {
+            const root = document.getElementById('rrsdf');
+            const canvas = document.getElementById('rrsdfCanvas');
+            const ctx = canvas.getContext('2d');
+            const stage = canvas.parentElement;
+            const hint = document.getElementById('rrsdfHint');
+            const elHx = document.getElementById('rrsdfHx'),
+                elHy = document.getElementById('rrsdfHy'),
+                elR = document.getElementById('rrsdfR');
+            const vHx = document.getElementById('rrsdfHxVal'),
+                vHy = document.getElementById('rrsdfHyVal'),
+                vR = document.getElementById('rrsdfRVal');
+            const outP = document.getElementById('rrsdfP'),
+                outAbs = document.getElementById('rrsdfAbs'),
+                outQ = document.getElementById('rrsdfQ'),
+                outExt = document.getElementById('rrsdfExt'),
+                outInt = document.getElementById('rrsdfInt'),
+                outD = document.getElementById('rrsdfD'),
+                outStatus = document.getElementById('rrsdfStatus');
+            const modeBtns = root.querySelectorAll('.rrsdf-mode');
+
+            function readFG() {
+                const c = getComputedStyle(root).color || 'rgb(200,200,200)';
+                const m = c.match(/-?\d+(\.\d+)?/g) || [200, 200, 200];
+                return [+m[0], +m[1], +m[2]];
+            }
+            let FG = readFG();
+            const rgba = a => 'rgba(' + FG[0] + ',' + FG[1] + ',' + FG[2] + ',' + a + ')';
+
+            let W = 640,
+                H = 420,
+                DPR = 1;
+            let hx = +elHx.value,
+                hy = +elHy.value,
+                r = +elR.value;
+            let mode = 'symmetry';
+            let pX = 150,
+                pY = 118,
+                hasHover = false;
+
+            const field = document.createElement('canvas');
+            const fctx = field.getContext('2d');
+            let raf = false,
+                fieldDirty = true;
+
+            const cx = () => W / 2,
+                cy = () => H / 2;
+            const tX = x => cx() + x,
+                tY = y => cy() - y;
+            const smooth = (a, b, x) => {
+                const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+                return t * t * (3 - 2 * t);
+            };
+
+            function sdf(x, y) {
+                const qx = Math.abs(x) - hx + r,
+                    qy = Math.abs(y) - hy + r;
+                const ax = Math.max(qx, 0),
+                    ay = Math.max(qy, 0);
+                return Math.hypot(ax, ay) + Math.min(Math.max(qx, qy), 0) - r;
+            }
+
+            function resize() {
+                const cw = Math.max(280, Math.min(720, stage.clientWidth || 640));
+                W = Math.round(cw);
+                H = Math.round(W * 0.66);
+                DPR = Math.min(2, window.devicePixelRatio || 1);
+                canvas.style.width = W + 'px';
+                canvas.style.height = H + 'px';
+                canvas.width = Math.round(W * DPR);
+                canvas.height = Math.round(H * DPR);
+                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+                field.width = W;
+                field.height = H;
+                FG = readFG();
+                fieldDirty = true;
+            }
+
+            function computeField() {
+                const img = fctx.createImageData(W, H),
+                    d = img.data,
+                    band = 24;
+                let idx = 0;
+                for (let j = 0; j < H; j++) {
+                    const y = cy() - j;
+                    for (let i = 0; i < W; i++) {
+                        const x = i - cx();
+                        const dist = sdf(x, y);
+                        let a = 0;
+                        if (dist < 0) {
+                            a += 0.05 + 0.06 * (1 - Math.min(1, -dist / 70));
+                        }
+                        const f = dist / band;
+                        const near = Math.abs(f - Math.round(f)) * band;
+                        a += (1 - smooth(0, 1.4, near)) * 0.16;
+                        a += (1 - smooth(0, 1.3, Math.abs(dist))) * 0.85;
+                        a = Math.min(1, a);
+                        d[idx++] = FG[0];
+                        d[idx++] = FG[1];
+                        d[idx++] = FG[2];
+                        d[idx++] = Math.round(a * 255);
+                    }
+                }
+                fctx.putImageData(img, 0, 0);
+            }
+
+            function axes() {
+                ctx.strokeStyle = rgba(.16);
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, tY(0));
+                ctx.lineTo(W, tY(0));
+                ctx.moveTo(tX(0), 0);
+                ctx.lineTo(tX(0), H);
+                ctx.stroke();
+            }
+
+            function ring(x, y, rad, label, ly) {
+                const px = tX(x),
+                    py = tY(y);
+                ctx.strokeStyle = rgba(.95);
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.arc(px, py, rad, 0, Math.PI * 2);
+                ctx.stroke();
+                if (label) {
+                    ctx.fillStyle = rgba(.9);
+                    ctx.font = '12px ' + getComputedStyle(root).fontFamily;
+                    ctx.fillText(label, px + rad + 6, py + (ly || -6));
+                }
+            }
+
+            function disc(x, y, rad, label, ly) {
+                const px = tX(x),
+                    py = tY(y);
+                ctx.fillStyle = rgba(.95);
+                ctx.beginPath();
+                ctx.arc(px, py, rad, 0, Math.PI * 2);
+                ctx.fill();
+                if (label) {
+                    ctx.fillStyle = rgba(.9);
+                    ctx.font = '12px ' + getComputedStyle(root).fontFamily;
+                    ctx.fillText(label, px + rad + 6, py + (ly || -6));
+                }
+            }
+
+            function drawSymmetry() {
+                const absX = Math.abs(pX),
+                    absY = Math.abs(pY);
+                ctx.fillStyle = rgba(.05);
+                ctx.fillRect(cx(), 0, cx(), cy());
+                ctx.strokeStyle = rgba(.28);
+                ctx.setLineDash([3, 4]);
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx() + .5, .5, cx() - 1, cy() - 1);
+                ctx.setLineDash([]);
+                ctx.fillStyle = rgba(.6);
+                ctx.font = '11px ' + getComputedStyle(root).fontFamily;
+                ctx.fillText('active math quadrant ( +x, +y )', cx() + 12, 20);
+                if (!hasHover) return;
+                const ghosts = [
+                    [-absX, absY],
+                    [absX, -absY],
+                    [-absX, -absY]
+                ];
+                ctx.strokeStyle = rgba(.4);
+                ctx.lineWidth = 1.2;
+                ghosts.forEach(g => {
+                    ctx.beginPath();
+                    ctx.arc(tX(g[0]), tY(g[1]), 3.2, 0, Math.PI * 2);
+                    ctx.stroke();
+                });
+                if (pX < 0 || pY < 0) {
+                    ctx.strokeStyle = rgba(.5);
+                    ctx.setLineDash([2, 4]);
+                    ctx.lineWidth = 1.3;
+                    ctx.beginPath();
+                    ctx.moveTo(tX(pX), tY(pY));
+                    if (pX < 0) ctx.lineTo(tX(absX), tY(pY));
+                    ctx.lineTo(tX(absX), tY(absY));
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ring(pX, pY, 5, 'p (' + Math.round(pX) + ', ' + Math.round(pY) + ')');
+                }
+                disc(absX, absY, 5.5, 'abs(p) (' + Math.round(absX) + ', ' + Math.round(absY) + ')');
+            }
+
+            function drawShrinking() {
+                const bx = hx - r,
+                    by = hy - r,
+                    ff = getComputedStyle(root).fontFamily;
+                ctx.strokeStyle = rgba(.5);
+                ctx.lineWidth = 1.3;
+                ctx.setLineDash([6, 5]);
+                ctx.strokeRect(tX(-hx), tY(hy), hx * 2, hy * 2);
+                ctx.setLineDash([]);
+                ctx.fillStyle = rgba(.6);
+                ctx.font = '11px ' + ff;
+                ctx.fillText('outer box (half)', tX(-hx) + 6, tY(hy) - 7);
+                ctx.fillStyle = rgba(.05);
+                ctx.fillRect(tX(-bx), tY(by), bx * 2, by * 2);
+                ctx.strokeStyle = rgba(.9);
+                ctx.lineWidth = 2;
+                ctx.strokeRect(tX(-bx), tY(by), bx * 2, by * 2);
+                ctx.fillStyle = rgba(.75);
+                ctx.fillText('shrunken core (half - r)', tX(-bx) + 6, tY(by) + 15);
+                if (r > 3) {
+                    ctx.strokeStyle = rgba(.85);
+                    ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    ctx.moveTo(tX(bx), tY(hy));
+                    ctx.lineTo(tX(hx), tY(hy));
+                    ctx.moveTo(tX(hx), tY(by));
+                    ctx.lineTo(tX(hx), tY(hy));
+                    ctx.stroke();
+                    ctx.fillStyle = rgba(.75);
+                    ctx.font = 'italic 11px ' + ff;
+                    ctx.fillText('gap = r (' + r + ')', tX(bx) + 3, tY(hy) + 14);
+                }
+                ctx.fillStyle = rgba(.7);
+                ctx.font = '11px ' + ff;
+                ctx.fillText('zero isoline = expand core by r  ->  rounded edge', tX(-hx) + 6, H - 12);
+                if (hasHover) disc(Math.abs(pX), Math.abs(pY), 5, 'abs(p)');
+            }
+
+            function updateReadout() {
+                if (!hasHover) {
+                    outP.textContent = outAbs.textContent = outQ.textContent = outExt.textContent = outInt.textContent = outD.textContent = '-';
+                    outStatus.textContent = '> hover the field';
+                    return;
+                }
+                const ax = Math.abs(pX),
+                    ay = Math.abs(pY);
+                const qx = ax - hx + r,
+                    qy = ay - hy + r;
+                const ext = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)); // length(max(q,0))
+                const inte = Math.min(Math.max(qx, qy), 0); // min(max(q.x,q.y),0)
+                const d = ext + inte - r; // == sdf(pX,pY)
+                outP.textContent = '(' + Math.round(pX) + ', ' + Math.round(pY) + ')';
+                outAbs.textContent = '(' + Math.round(ax) + ', ' + Math.round(ay) + ')';
+                outQ.textContent = '(' + qx.toFixed(0) + ', ' + qy.toFixed(0) + ')';
+                outExt.textContent = '+' + ext.toFixed(1) + ' px';
+                outInt.textContent = (inte < 0 ? '' : '+') + inte.toFixed(1) + ' px';
+                outD.textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + ' px';
+                let s;
+                if (d < -0.6) s = '> inside  ( d < 0 )';
+                else if (d > 0.6) s = '> outside ( d > 0 )';
+                else s = '> on the edge ( d = 0 )';
+                outStatus.textContent = s;
+            }
+
+            function render() {
+                if (fieldDirty) {
+                    computeField();
+                    fieldDirty = false;
+                }
+                ctx.clearRect(0, 0, W, H);
+                ctx.drawImage(field, 0, 0, W, H);
+                axes();
+                if (mode === 'symmetry') drawSymmetry();
+                else drawShrinking();
+                updateReadout();
+            }
+
+            function requestRender() {
+                if (!raf) {
+                    raf = true;
+                    requestAnimationFrame(() => {
+                        raf = false;
+                        render();
+                    });
+                }
+            }
+
+            function syncSliders() {
+                hx = +elHx.value;
+                hy = +elHy.value;
+                const maxR = Math.min(hx, hy);
+                elR.max = maxR;
+                r = Math.min(+elR.value, maxR);
+                elR.value = r;
+                vHx.textContent = hx;
+                vHy.textContent = hy;
+                vR.textContent = r;
+                fieldDirty = true;
+                requestRender();
+            }
+            [elHx, elHy, elR].forEach(el => el.addEventListener('input', syncSliders));
+
+            modeBtns.forEach(btn => btn.addEventListener('click', () => {
+                mode = btn.dataset.mode;
+                modeBtns.forEach(b => {
+                    const on = b === btn;
+                    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    b.querySelector('.mk').textContent = on ? '[*]' : '[ ]';
+                });
+                requestRender();
+            }));
+
+            function pointer(e) {
+                const rect = canvas.getBoundingClientRect();
+                const sx = W / rect.width,
+                    sy = H / rect.height;
+                pX = (e.clientX - rect.left) * sx - cx();
+                pY = cy() - (e.clientY - rect.top) * sy;
+                hasHover = true;
+                hint.classList.add('gone');
+                requestRender();
+            }
+            canvas.addEventListener('pointermove', pointer);
+            canvas.addEventListener('pointerdown', pointer);
+            canvas.addEventListener('pointerleave', () => {
+                hasHover = false;
+                requestRender();
+            });
+
+            if ('ResizeObserver' in window) {
+                new ResizeObserver(() => {
+                    resize();
+                    requestRender();
+                }).observe(stage);
+            } else {
+                window.addEventListener('resize', () => {
+                    resize();
+                    requestRender();
+                });
+            }
+
+            resize();
+            syncSliders();
+        })();</script></div><p> </p><h3>Anti-Aliasing</h3><p>Now we have a rectangle with rounding. It looks good, but if you look closely you will notice the edges look jagged. It looks bad if you think about it, and it does not look like a production rectangle, like the ones Chrome uses for example. And as I mentioned earlier, we cannot just reach for MSAA, that would be a hell of a performance hit.</p><p>So we will go back to math to help us out. Let's first take a deep dive into a shader function called <code>fwidth</code>.</p><p><code>fwidth</code>, by definition, returns the sum of the absolute values of the derivatives in x and y. But what is that supposed to mean? <code>fwidth(dist)</code>, where <code>dist</code> in our case is the result of the SDF equation, is really asking the GPU a very smart question: if I move one pixel over on the screen, how much does the value of <code>dist</code> change?</p><p>I won't go into the details of how <code>fwidth</code> works, you can check <a href="https://registry.khronos.org/OpenGL-Refpages/gl4/html/fwidth.xhtml">Khronos</a> for more information. What I care about here is how we can use it for anti-aliasing.</p><p>Let's take a step back first and look at what we do once we have <code>dist</code>. The naive approach: if <code>dist &lt; 0</code> make the pixel white (inside), otherwise make it black (outside). That is a harsh threshold if you think about it, because that hard jump straight from black to white is exactly what causes the jaggies.</p><p>Instead, we can take the result of <code>fwidth</code>, call it <code>aa</code>, and use it to <code>smoothstep</code> from negative <code>aa</code> to positive <code>aa</code>: <code>smoothstep(-aa, aa, dist)</code>.</p><p>So what does that actually give us? <code>smoothstep</code> takes a lower edge, an upper edge, and a value, and it returns a smooth 0 to 1 ramp between those two edges. Feed it <code>dist</code> and it returns 0 when we are well inside (<code>dist</code> below <code>-aa</code>), 1 when we are well outside (<code>dist</code> above <code>+aa</code>), and a soft curve in the thin band between them. That band is our edge.</p><p>Right now it reads backwards for us: 0 inside, 1 outside. So we flip it:</p><pre><code class="language-glsl">float dist     = sdRoundedBox(input.local, gPush.halfSize, gPush.radius);
+float aa       = max(fwidth(dist), 1e-4);
+float outer    = 1.0 - smoothstep(-aa, aa, dist);   // 1 inside, fades to 0 outside
+</code></pre><p>Now <code>outer</code> is 1 deep inside the shape, 0 outside it, and a smooth value in between. No more hard black to white jump, we get a gentle ramp across the edge instead, and that ramp is what kills the jaggies.</p><p>Here is the part that makes <code>fwidth</code> the right tool and not just any small number. The width of that ramp is <code>aa</code>, and <code>aa</code> is <code>fwidth(dist)</code>, which is how much <code>dist</code> changes over a single pixel. So the transition is always about one pixel wide, no matter how big or small the rectangle is on screen. Zoom in until the rect fills the monitor, or shrink it down to a tiny icon, and the edge keeps the same one pixel of softness. If we had hardcoded a fixed width instead, the edge would look sharp at one size and blurry or jagged at another.</p><p>And the <code>max(fwidth(dist), 1e-4)</code> is the guard rail. If <code>fwidth</code> ever comes back as zero (a flat area where <code>dist</code> is not changing, or some degenerate fragment), the ramp would collapse back into a hard edge, or blow up into a NaN once it gets used further down the line. Clamping it to a tiny value keeps a sane, minimal ramp alive.</p><p>That is it. Two extra lines of math and the edges are smooth. No MSAA, no rendering the rectangle four times.</p><p>The output of this step is the <strong>outer</strong> and the <strong>fill color</strong></p><h3>Borders</h3><p>After anti aliasing step we got outer where 1 is inside, 0 is outside, and edges are smoothed. We will need now to inner shape. This shape will be the normal shape + the border width. Something like this:</p><pre class="language-glsl"><code>float inner= 1.0 - smoothstep(-aa, aa, dist+borderWidth);  </code></pre><p>Remember here we add the border width because negative dist means inside the rectangle while positive dist means outside the shape</p><p class="msg msg--info">Outer and inner feel confusing a bit and you might think it's inverted. But surprisingly they correct. They are relative to the shape itself not for the quad. Meaning out</p><p>If you think everything above is magic. Let me walk you to the real magic where we link everything together. First, Let's create the border ring. It's quite easy</p><pre class="language-glsl"><code>float  ring   = saturate(outer - inner);</code></pre><p>Basically just pixels with the border width but smoothed to avoid aliasing.</p><p>From this step we have two outputs the <strong>border color</strong> and the <strong>ring</strong></p><p> </p><h3>Render The Rectangle</h3><p>We now use the ring, border color, and the fill color to give our rectangle a color. The equation is quite easy</p><pre class="language-glsl"><code>float3 out = borderColor * ring + fillColor * outer * (1 - ring)</code></pre><h3> </h3><h3>Bonus Step</h3><p>While everything we said above is correct. It lacks very important detail which is alpha. Usually when we define a color we have an alpha channel and defaults to 255 If not present.</p><p>In the equation above, we assume two things. First, the border's strength on top of the fill is just the ring which is the coverage of the border. Second, It's an opaque rectangle we cannot make it transparent for instance. To fix this we will take ring and outer out of equation and introduce immediate steps.</p><p>First, Filling Opacity</p><pre class="language-glsl"><code>float  fa   = fill.a * outer;</code></pre><p>Second, Border Opacity</p><pre class="language-glsl"><code>float ba   = border.a * ring;</code></pre><p>Third, Out Opacity</p><pre class="language-glsl"><code>float  outA   = ba + fa * (1.0 - ba);</code></pre><p class="msg msg--info"><code>1.0 - ba</code> multiplied by filling alpha for a simple reason. We do borders on top of filling color. So, we are telling the alpha fill only places that border does note exist</p><p> </p><p>So, Final code would look something like this:</p><pre class="language-glsl"><code>float4 PSMain(VSOutput input) : SV_Target {
+    float dist  = sdRoundedBox(input.local, gPush.halfSize, gPush.radius);
+    float aa    = max(fwidth(dist), 1e-4);
+    float outer = 1.0 - smoothstep(-aa, aa, dist); // coverage of the rounded shape
+
+    float4 fill = input.col;
+    float  fa   = fill.a * outer;
+
+    float  ba   = 0.0;
+    float3 brgb = float3(0.0, 0.0, 0.0);
+    if (gPush.borderWidth &gt; 0.0) {
+        float  inner  = 1.0 - smoothstep(-aa, aa, dist + gPush.borderWidth);
+        float  ring   = saturate(outer - inner);
+        float4 border = UnpackRgba(gPush.borderColor);
+        ba   = border.a * ring;
+        brgb = border.rgb;
+    }
+
+    // Straight-alpha "border over fill" within the shape; the blend state does the over-composite
+    // against the framebuffer.
+    float  outA   = ba + fa * (1.0 - ba);
+    float3 outRgb = outA &gt; 1e-5 ? (brgb * ba + fill.rgb * fa * (1.0 - ba)) / outA : fill.rgb;
+    return float4(outRgb, outA);
+}
+</code></pre><hr><p>If you are familiar with SDFs you will see something wrong. SDFs by nature assume (0,0) is the middle but in default quad UV (0,0) exist in bottom left. For this, We have two options:</p><ul><li>Center the UV in vertex shader.</li><li>Bake UV in quad so uv moves from (-hx,-hy) to (hx,hy) (The method I am using)</li></ul><p> </p><hr><p>With everything above. We did a good fast implementation for a rectangle that support basic features like border, radius, opacity, and anti aliasing. Our rectangle still miss two important features:</p><ul><li>Gradients (Will take it in another article)</li><li>Inside Clipping which called in web (overview: hidden)</li></ul><p>Let's first start with <strong>How rectangles will be rendered relative to each other in screen for GPU optimizations?</strong> Let me first explain something. I built my own Flexbox Calculator so the output positions and sizes are absolute not relative ti their parents With this in mind. We have literally two cases:</p><ul><li>Overview hidden containers (In my case Row, Column, Stack,...etc.) which clip anything</li><li>Scroll container</li></ul><p>Let's focus first on overview-hidden containers. Say you build a container with 100 objects, but the solved size can hold only 20 of them. That means 80 items are never actually visible. If we blindly submit draw calls for every one of them anyway, we waste GPU time shading pixels nobody sees, or worse, waste CPU time recording draw calls that get thrown away regardless.</p><p>This is where clipping comes in, and it works on two levels: a coarse cull on the CPU, and a hard visual clip on the GPU.</p><h3>Push and Pop: The Clip Stack</h3><p>Every container that clips pushes a rectangle onto a stack before drawing its children, and pops it back off once it is done. That is really all <code>PushClip</code> and <code>PopClip</code> mean: maintain a stack of rectangles, and whatever we draw next only shows up inside whatever is currently on top.</p><p>The important detail is that a nested clip does not replace the outer one, it intersects with it. If a scrollable list (clip A) contains a card (clip B), and the card is only half inside the scroll viewport, the visible region for anything inside the card is the intersection of A and B, not just B. So pushing a clip really means:</p><pre><code class="language-glsl">Rect newClip = parentClip.isValid() ? parentClip.intersect(myRect) : myRect;
+clipStack.push(newClip);</code></pre><p>and popping just restores whatever was on top before.</p><h3>The Cheap Win: CPU-Side Cull</h3><p>Before we even get to the GPU, this stack gives us a free optimization. Since we already know the active clip rectangle while walking the tree, we can test each child's bounding box against it before recording anything. If a child's box does not intersect the clip window at all, we skip it, and its entire subtree, completely. Going back to our 100-object container holding 20 visible ones: as we scroll down that list, only the roughly 20 that intersect the viewport ever get visited. The other 80 are skipped with a single bounding-box check each, no draw call, no vertex shader, no fragment shader, nothing.</p><p>This matters more than it sounds. A long scrollable list is exactly the pattern where this pays off, the deeper and heavier a card's subtree is (text, images, nested containers), the more work a single bounding-box rejection saves you.</p><h3>The GPU Side: Scissor Rect</h3><p>Once we know what is roughly on screen, the GPU still needs to clip individual pixels, a card that is half inside the viewport should have its bottom half cut off, not culled entirely. That is the scissor test: fixed-function rasterizer hardware that rejects any pixel outside a given rectangle before the fragment shader even runs. It is essentially free, since it happens earlier in the pipeline than shading.</p><p>The catch is a scissor rect is always axis-aligned and always a hard edge. That is fine for a plain rectangular clip, but our containers can have rounded corners, and we already went through the trouble of anti-aliasing our rounded rectangles earlier in this article. Clipping to a hard rectangular scissor would throw all that softness away right at the boundary.</p><p>So the scissor alone only gets us the coarse rectangle. To bring back the smooth rounded edge, we compute a coverage value per pixel, which is the exact same idea we used for the rectangle fill earlier. We reuse our <code>sdRoundedBox</code> function, but with a little new machinery around it. Let's start with a simple question: how does a pixel know whether it sits near the edge of the clip, so it can soften itself there? The answer is easy. If a fragment shader requests <code>SV_POSITION</code> the GPU hands it the pixel's screen space position, which we will call <strong><code>fragPx</code></strong>.</p><p>We will also need <code>clipCenter</code>, the center of the clip box in that same screen space, computed on the CPU from the solved x, y, width, and height.</p><p>Why both? Because <code>sdRoundedBox</code> only knows how to measure a point against a box centered on the origin. <code>fragPx</code> is an absolute screen coordinate, and the clip box can sit anywhere on screen. So we subtract <code>clipCenter</code> from <code>fragPx</code> to re-express the pixel relative to the box's own center, which is the only frame the SDF understands. That one subtraction is what lets a single formula clip a box wherever it lands.</p><p>Now we know what coverage is, what we need to compute it, and where those inputs come from.</p><p>Let's link everything together:</p><pre class="language-glsl"><code>float ClipCoverage(float2 fragPx){
+        float2 p = fragPx - gPush.clipCenter;
+        float  dist = sdRoundedBox(p, gPush.clipHalf, gPush.clipRadius);
+        float  aa   = max(fwidth(dist), 1e-4);
+        return 1.0 - smoothstep(-aa, aa, dist);
+}</code></pre><p>Then we multiply the result into the alpha channel of the fragment output:</p><pre class="language-glsl"><code>return float4(outRgb, outA * ClipCoverage(input.pos.xy));</code></pre><p>Play with the visualizer below. The container holds far more objects than it can show. Switch between drawing everything, clipping with a hard scissor rectangle, and clipping with the SDF coverage on top. Watch the corners: the plain scissor is a bounding box and cannot round, so content leaks into the corners no matter what radius you ask for. Coverage is what actually carves the rounded, anti-aliased edge. Drag inside the canvas to move the clip box around.</p><div id="rrclip" class="rrsdf"><div class="rrsdf-head"><span class="rrsdf-eq">outA *= ClipCoverage(fragPx)</span> <span class="rrsdf-tag">[ scissor vs coverage ]</span></div><div class="rrsdf-body"><div class="rrsdf-stage"><canvas id="rrclipCanvas"></canvas><div id="rrclipHint" class="rrsdf-hint">drag to move the clip, hover to read coverage</div></div><div class="rrsdf-panel"><div><span class="rrsdf-seg-label">clip mode</span><div class="rrsdf-modes" role="group" aria-label="Clip mode"><button class="rrsdf-mode" data-mode="none" aria-pressed="true"><span class="mk">[*]</span><span class="lbl">1. No clip (everything draws)</span></button> <button class="rrsdf-mode" data-mode="scissor" aria-pressed="false"><span class="mk">[ ]</span><span class="lbl">2. Scissor only (hard bounding box)</span></button> <button class="rrsdf-mode" data-mode="coverage" aria-pressed="false"><span class="mk">[ ]</span><span class="lbl">3. Scissor + SDF coverage</span></button></div></div><div class="rrsdf-sliders"><div class="rrsdf-slider"><label for="rrclipHx">clipHalf.x<span id="rrclipHxVal" class="val">200</span></label><input id="rrclipHx" max="300" min="80" type="range" value="200"></div><div class="rrsdf-slider"><label for="rrclipHy">clipHalf.y<span id="rrclipHyVal" class="val">130</span></label><input id="rrclipHy" max="200" min="60" type="range" value="130"></div><div class="rrsdf-slider"><label for="rrclipR">clipRadius<span id="rrclipRVal" class="val">48</span></label><input id="rrclipR" max="120" min="0" type="range" value="48"></div></div><div class="rrsdf-readout"><div class="row"><span class="rk">fragPx</span><span id="rrclipFrag" class="rv">-</span></div><div class="row"><span class="rk">clipCenter</span><span id="rrclipCenter" class="rv">-</span></div><div class="row"><span class="rk">p = frag-center</span><span id="rrclipP" class="rv">-</span></div><div class="row"><span class="rk">dist (sdf)</span><span id="rrclipDist" class="rv">-</span></div><div class="row"><span class="rk">coverage</span><span id="rrclipCov" class="rv">-</span></div><div class="rrsdf-status"><span id="rrclipStatus">&gt; hover the field</span></div></div></div></div></div><p><script>(function() {
+        const root = document.getElementById('rrclip');
+        const canvas = document.getElementById('rrclipCanvas');
+        const ctx = canvas.getContext('2d');
+        const stage = canvas.parentElement;
+        const hint = document.getElementById('rrclipHint');
+        const elHx = document.getElementById('rrclipHx'),
+            elHy = document.getElementById('rrclipHy'),
+            elR = document.getElementById('rrclipR');
+        const vHx = document.getElementById('rrclipHxVal'),
+            vHy = document.getElementById('rrclipHyVal'),
+            vR = document.getElementById('rrclipRVal');
+        const outFrag = document.getElementById('rrclipFrag'),
+            outCenter = document.getElementById('rrclipCenter'),
+            outP = document.getElementById('rrclipP'),
+            outDist = document.getElementById('rrclipDist'),
+            outCov = document.getElementById('rrclipCov'),
+            outStatus = document.getElementById('rrclipStatus');
+        const modeBtns = root.querySelectorAll('.rrsdf-mode');
+
+        function readFG() {
+            const c = getComputedStyle(root).color || 'rgb(200,200,200)';
+            const m = c.match(/-?\d+(\.\d+)?/g) || [200, 200, 200];
+            return [+m[0], +m[1], +m[2]];
+        }
+        let FG = readFG();
+        const rgba = a => 'rgba(' + FG[0] + ',' + FG[1] + ',' + FG[2] + ',' + a + ')';
+
+        let W = 640, H = 420, DPR = 1;
+        let hx = +elHx.value, hy = +elHy.value, r = +elR.value;
+        let ccx = 320, ccy = 210;
+        let mode = 'none';
+        let fpx = 0, fpy = 0, hasHover = false, dragging = false;
+        const aa = 1.4;
+
+        const content = document.createElement('canvas');
+        const cctx = content.getContext('2d');
+        let contentData = null;
+        let raf = false;
+
+        const smooth = (a, b, x) => {
+            const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+            return t * t * (3 - 2 * t);
+        };
+
+        function sdBox(px, py, halfX, halfY, rad) {
+            rad = Math.min(rad, Math.min(halfX, halfY));
+            const qx = Math.abs(px) - halfX + rad, qy = Math.abs(py) - halfY + rad;
+            return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - rad;
+        }
+
+        function roundRectPath(c, x, y, w, h, rad) {
+            rad = Math.min(rad, w * 0.5, h * 0.5);
+            c.beginPath();
+            c.moveTo(x + rad, y);
+            c.arcTo(x + w, y, x + w, y + h, rad);
+            c.arcTo(x + w, y + h, x, y + h, rad);
+            c.arcTo(x, y + h, x, y, rad);
+            c.arcTo(x, y, x + w, y, rad);
+            c.closePath();
+        }
+
+        // Deterministic grid of rounded objects that deliberately overflows the clip box.
+        function buildContent() {
+            content.width = W;
+            content.height = H;
+            cctx.clearRect(0, 0, W, H);
+            let s = 987654321;
+            const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+            const cols = 8, rows = 6;
+            const cw = W / cols, ch = H / rows;
+            for (let ry = 0; ry < rows; ry++) {
+                for (let cxi = 0; cxi < cols; cxi++) {
+                    const pad = 5 + rnd() * 9;
+                    const x = cxi * cw + pad, y = ry * ch + pad;
+                    const w = cw - 2 * pad, h = ch - 2 * pad;
+                    const rad = 3 + rnd() * 9;
+                    const alpha = 0.18 + rnd() * 0.5;
+                    roundRectPath(cctx, x, y, w, h, rad);
+                    cctx.fillStyle = rgba(alpha);
+                    cctx.fill();
+                }
+            }
+            contentData = cctx.getImageData(0, 0, W, H);
+        }
+
+        function resize() {
+            const cw = Math.max(280, Math.min(720, stage.clientWidth || 640));
+            W = Math.round(cw);
+            H = Math.round(W * 0.66);
+            DPR = Math.min(2, window.devicePixelRatio || 1);
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            canvas.width = Math.round(W * DPR);
+            canvas.height = Math.round(H * DPR);
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            ccx = W / 2;
+            ccy = H / 2;
+            FG = readFG();
+            buildContent();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+
+            if (mode === 'none' || !contentData) {
+                ctx.drawImage(content, 0, 0);
+            } else {
+                const src = contentData.data;
+                const out = ctx.createImageData(W, H);
+                const dst = out.data;
+                const x0 = ccx - hx, x1 = ccx + hx, y0 = ccy - hy, y1 = ccy + hy;
+                for (let j = 0; j < H; j++) {
+                    for (let i = 0; i < W; i++) {
+                        const idx = (j * W + i) * 4;
+                        let f;
+                        if (mode === 'scissor') {
+                            f = (i >= x0 && i <= x1 && j >= y0 && j <= y1) ? 1 : 0;
+                        } else {
+                            const dsd = sdBox(i - ccx, j - ccy, hx, hy, r);
+                            f = 1 - smooth(-aa, aa, dsd);
+                        }
+                        dst[idx] = src[idx];
+                        dst[idx + 1] = src[idx + 1];
+                        dst[idx + 2] = src[idx + 2];
+                        dst[idx + 3] = src[idx + 3] * f;
+                    }
+                }
+                ctx.putImageData(out, 0, 0);
+            }
+
+            if (mode === 'scissor') {
+                ctx.strokeStyle = rgba(.55);
+                ctx.lineWidth = 1.4;
+                ctx.strokeRect(ccx - hx, ccy - hy, hx * 2, hy * 2);
+                ctx.strokeStyle = rgba(.85);
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1.6;
+                roundRectPath(ctx, ccx - hx, ccy - hy, hx * 2, hy * 2, r);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                if (r > 3) {
+                    ctx.fillStyle = rgba(.8);
+                    ctx.font = '11px ' + getComputedStyle(root).fontFamily;
+                    ctx.fillText('corners leak: scissor keeps the square bbox', ccx - hx + 6, ccy - hy - 8);
+                }
+            } else if (mode === 'coverage') {
+                ctx.strokeStyle = rgba(.75);
+                ctx.lineWidth = 1.6;
+                roundRectPath(ctx, ccx - hx, ccy - hy, hx * 2, hy * 2, r);
+                ctx.stroke();
+            }
+
+            if (hasHover) {
+                ctx.strokeStyle = rgba(.95);
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(fpx - 6, fpy);
+                ctx.lineTo(fpx + 6, fpy);
+                ctx.moveTo(fpx, fpy - 6);
+                ctx.lineTo(fpx, fpy + 6);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = rgba(.5);
+            ctx.font = '11px ' + getComputedStyle(root).fontFamily;
+            const cap = mode === 'none' ? 'no clip: every object is drawn, overflow and all' :
+                mode === 'scissor' ? 'scissor only: hard axis-aligned cut, square corners' :
+                'scissor + coverage: smooth rounded, anti-aliased edge';
+            ctx.fillText(cap, 10, H - 10);
+
+            updateReadout();
+        }
+
+        function updateReadout() {
+            if (!hasHover || mode === 'none') {
+                outFrag.textContent = outCenter.textContent = outP.textContent = outDist.textContent = outCov.textContent = '-';
+                outStatus.textContent = mode === 'none' ? '> pick scissor or coverage' : '> hover the field';
+                return;
+            }
+            const px = fpx - ccx, py = fpy - ccy;
+            const dsd = sdBox(px, py, hx, hy, r);
+            const cov = mode === 'scissor'
+                ? ((fpx >= ccx - hx && fpx <= ccx + hx && fpy >= ccy - hy && fpy <= ccy + hy) ? 1 : 0)
+                : 1 - smooth(-aa, aa, dsd);
+            outFrag.textContent = '(' + Math.round(fpx) + ', ' + Math.round(fpy) + ')';
+            outCenter.textContent = '(' + Math.round(ccx) + ', ' + Math.round(ccy) + ')';
+            outP.textContent = '(' + Math.round(px) + ', ' + Math.round(py) + ')';
+            outDist.textContent = (dsd >= 0 ? '+' : '') + dsd.toFixed(1) + ' px';
+            outCov.textContent = cov.toFixed(2);
+            outStatus.textContent = cov > 0.99 ? '> kept  ( coverage ~1 )' :
+                cov < 0.01 ? '> clipped ( coverage ~0 )' : '> soft edge ( 0 < coverage < 1 )';
+        }
+
+        function requestRender() {
+            if (!raf) {
+                raf = true;
+                requestAnimationFrame(() => { raf = false; render(); });
+            }
+        }
+
+        function syncSliders() {
+            hx = +elHx.value;
+            hy = +elHy.value;
+            const maxR = Math.min(hx, hy);
+            elR.max = maxR;
+            r = Math.min(+elR.value, maxR);
+            elR.value = r;
+            vHx.textContent = hx;
+            vHy.textContent = hy;
+            vR.textContent = r;
+            requestRender();
+        }
+        [elHx, elHy, elR].forEach(el => el.addEventListener('input', syncSliders));
+
+        modeBtns.forEach(btn => btn.addEventListener('click', () => {
+            mode = btn.dataset.mode;
+            modeBtns.forEach(b => {
+                const on = b === btn;
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                b.querySelector('.mk').textContent = on ? '[*]' : '[ ]';
+            });
+            requestRender();
+        }));
+
+        function pointer(e) {
+            const rect = canvas.getBoundingClientRect();
+            const sx = W / rect.width, sy = H / rect.height;
+            fpx = (e.clientX - rect.left) * sx;
+            fpy = (e.clientY - rect.top) * sy;
+            hasHover = true;
+            hint.classList.add('gone');
+            if (dragging) { ccx = fpx; ccy = fpy; }
+            requestRender();
+        }
+        canvas.addEventListener('pointermove', pointer);
+        canvas.addEventListener('pointerdown', e => { dragging = true; pointer(e); });
+        window.addEventListener('pointerup', () => { dragging = false; });
+        canvas.addEventListener('pointerleave', () => { hasHover = false; requestRender(); });
+
+        if ('ResizeObserver' in window) {
+            new ResizeObserver(() => { resize(); requestRender(); }).observe(stage);
+        } else {
+            window.addEventListener('resize', () => { resize(); requestRender(); });
+        }
+
+        resize();
+        syncSliders();
+    })();a</script></p><p>One thing worth mentioning: running this coverage on every pixel is not free. We can skip it entirely whenever the clip radius is 0, which covers the vast majority of containers, since a square clip is already pixel perfect under the plain scissor rectangle. In that case the scissor alone does the job and we never pay for the SDF.</p><p>That is the whole trick: cull subtrees on the CPU using rect intersection tests, hard-clip the rest with a cheap scissor rect, and only pay the SDF cost exactly where the rounded edge actually lives.</p><p>Overview-hidden containers is one of our two cases. The other is scroll containers, which need one more trick layered on top: everything above just clips in place, but a scroll container also has to move its content around before clipping it.</p><p> </p><p>Now we built a great rectangle that can be used as a container and some cool stuff like labels and buttons or even better custom drawing using painter like web canvas and QT painter. In the next article we will discuss how to render text and how to coverage them for good looking text. Stay tuned!</p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on July 17, 2026</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/the-art-of-render-graphs/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  The Art of Render Graphs "><span class="btn__icon">←</span> <span class="btn__text">The Art of Render Graphs</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                images[i].classList.add('is-loaded');
+            } else {
+                images[i].addEventListener('load', function () {
+                    this.classList.add('is-loaded');
+                }, false);
+            }
+        }</script><script>window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};</script></body></html>
