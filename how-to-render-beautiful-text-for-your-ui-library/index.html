@@ -1,0 +1,624 @@
+<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>How to Render Beautiful Text for your UI library (Part 1) - alielmorsy</title><meta name="description" content="In the last article, we talked about how we can render rectangles. How about using rectangles? Let's start directly by giving you a version of&hellip;"><meta name="generator" content="Publii Open-Source CMS for Static Site"><script type="text/javascript" async src="https://www.googletagmanager.com/gtag/js?id=G-95HF07BQWM"></script><script type="text/javascript">window.dataLayer = window.dataLayer || [];
+				  function gtag(){dataLayer.push(arguments);}
+				  gtag('js', new Date());
+				  gtag('config', 'G-95HF07BQWM' , { 'anonymize_ip': true });</script><link rel="canonical" href="https://alielmorsy.github.io/how-to-render-beautiful-text-for-your-ui-library/"><link rel="alternate" type="application/atom+xml" href="https://alielmorsy.github.io/feed.xml" title="alielmorsy - RSS"><link rel="alternate" type="application/json" href="https://alielmorsy.github.io/feed.json" title="alielmorsy - JSON"><meta property="og:title" content="How to Render Beautiful Text for your UI library (Part 1)"><meta property="og:site_name" content="alielmorsy"><meta property="og:description" content="In the last article, we talked about how we can render rectangles. How about using rectangles? Let's start directly by giving you a version of&hellip;"><meta property="og:url" content="https://alielmorsy.github.io/how-to-render-beautiful-text-for-your-ui-library/"><meta property="og:type" content="article"><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="https://alielmorsy.github.io/assets/dynamic/fonts/jetbrainsmono/jetbrainsmono-italic.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/style.css?v=559173cf7ad6a1f1f4ee2113e39c6703"><script type="application/ld+json">{"@context":"http://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"https://alielmorsy.github.io/how-to-render-beautiful-text-for-your-ui-library/"},"headline":"How to Render Beautiful Text for your UI library (Part 1)","datePublished":"2026-07-20T03:28+03:00","dateModified":"2026-07-20T23:05+03:00","description":"In the last article, we talked about how we can render rectangles. How about using rectangles? Let's start directly by giving you a version of&hellip;","author":{"@type":"Person","name":"Ali Elmorsy","url":"https://alielmorsy.github.io/authors/ali-elmorsy/"},"publisher":{"@type":"Organization","name":"Ali Elmorsy"}}</script><noscript><style>img[loading] {
+                    opacity: 1;
+                }</style></noscript><meta name="google-site-verification" content="kDXO-JveqYdT-vTIaGvOjwG2HgiuLFacIAjlNaAiiIo"><style>.li{fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}</style><link rel="stylesheet" href="https://alielmorsy.github.io/assets/css/prism.css?v=0d8f74e30dc86a895725a07311c4e87c"></head><body class="post-template"><div class="container container--center"><header class="header"><div class="header__logo"><a class="logo" href="https://alielmorsy.github.io/">alielmorsy</a></div><nav class="navbar js-navbar"><button class="navbar__toggle js-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><span class="navbar__toggle-box"><span class="navbar__toggle-inner">Menu</span></span></button><ul class="navbar__menu"><li><a href="https://alielmorsy.github.io//" target="_self">Home</a></li><li><a href="https://alielmorsy.github.io/projects-2/" target="_self">Projects</a></li><li><a href="https://alielmorsy.github.io/about-me/" target="_self">About Me</a></li></ul></nav></header><main class="content"><article class="post"><header><h1 class="post__title">How to Render Beautiful Text for your UI library (Part 1)</h1><div class="post__meta"><time datetime="2026-07-20T03:28" class="post__date">July 20, 2026 </time><span class="post__author"><a href="https://alielmorsy.github.io/authors/ali-elmorsy/" class="feed__author">Ali Elmorsy</a></span></div></header><div class="post__entry"><p>In the last article, we talked about how we can render rectangles. How about using rectangles? Let's start directly by giving you a version of this rectangle that can be used to render textures:</p><pre class="language-glsl"><code>float4 PSMain(VSOutput input) : SV_Target {
+    float clip = ClipCoverage(input.pos.xy);
+    if (gPush.mode == 0u) {
+        float a = gTex.Sample(gSampler, input.uv).r; // coverage mask
+        return float4(input.col.rgb, input.col.a * a * clip);
+    }
+    float4 c = gTex.Sample(gSampler, input.uv) * input.col; // RGBA, modulated
+    return float4(c.rgb, c.a * clip);
+}
+</code></pre><p>We will talk about the mode later, but just know <code>mode!=0</code> is for normal textures. Also, I removed the SDF rounding for simplicity.</p><p> </p><h2>Fonts</h2><p>Everyone has seen a font file once in his life, but not everyone knows what's inside it. <strong>A Font </strong>file literally contains the following:</p><ul><li><strong>The Shapes (Glyphs)</strong>: The bezier curves used to draw a character<figure class="post__image post__image--center"><img loading="lazy" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCJTRM1I-XxLvWZdDkapefIaCJBiRwBmmyLARPAfP9a4txJ4Sj6ZQFe--t&amp;s=10" alt="Anatomy of a glyph's spacing data. Source: QuesoGLC - SourceForge" width="388" height="253" data-is-external-image="true"></figure></li><li><strong>Glyph Metrics</strong>: How much space a letter occupies</li><li><strong>Layout Rules (Ligatures)</strong>: Like, for example, how to combine characters. In Arabic, there is a letter <strong>هاء </strong>which is written like this <strong>ه</strong>, but can be written differently if it is at the start of the word, like <strong>هواء</strong>, or at the end of the word, like <strong>وجه</strong>. As another example, in English, when letters like <strong>f</strong> and <strong>i</strong> are next to each other, they can be combined into a single shape <strong>ﬁ</strong> so the dot of the <strong>i</strong> doesn't crash into the top of the <strong>f</strong>.</li><li><strong>Glyph Mapping</strong>: It's what this glyph maps to. Usually a 1-to-1 mapping, except in specific cases like the ones mentioned above</li></ul><p> </p><div id="model-response-message-contentr_9aa84f7e6f2931ab" class="markdown markdown-main-panel enable-luminous-fast-follows enable-updated-hr-color stronger tutor-markdown-rendering" dir="ltr" aria-busy="false" aria-live="polite"><p data-path-to-node="0">We mentioned a <strong data-path-to-node="0" data-index-in-node="27">Glyph</strong> above, but never defined it. If you are smart, you will notice that a <strong data-path-to-node="0" data-index-in-node="96">Glyph</strong> means a <strong data-path-to-node="0" data-index-in-node="110">character</strong>. That is correct, but it is not completely accurate. You see, <strong>a</strong> and <strong>A</strong> are the same character to us, but they are written in two different ways. Another example is what we talked about above in layout rules: <strong>fi</strong>, which takes on a unique shape when the two letters are written together. Therefore, each has its own <strong data-path-to-node="0" data-index-in-node="428">Glyph</strong>. As mentioned before, a <strong data-path-to-node="0" data-index-in-node="458">glyph</strong> is simply the set of curves used to draw a <strong data-path-to-node="0" data-index-in-node="507">character</strong>.</p></div><p> </p><h3>How Are Fonts Rasterized?</h3><p>We will use the <strong>FreeType</strong> library for that. Let's start simple. We will split a word into characters, and look up the corresponding glyph for each one. We can use <code>FT_Get_Char_Index</code>. This simple function returns the glyph index in the given font face.</p><p>Using this glyph index, we can get a bitmap texture of how this character will look on screen using <code>FT_Load_Glyph</code>. Inside this function is where all the magic happens. It converts these curves into an image, but how?</p><p>As mentioned above, Glyphs are stored as curves, with particular coordinate points representing the curves. Check the <a href="https://freetype.org/freetype2/docs/reference/ft2-raster.html">Scan Line Converter By FreeType</a> for more information. It will explain how it's done way better than I could. But in simple terms, it rasterizes an image row by row.</p><p> </p><div id="glsv-demo-1" class="glsv-demo"><canvas class="glsv-canvas" width="420" height="420" aria-label="Interactive scan line rasterization. Drag the points to reshape the glyph."></canvas><div class="glsv-controls"><div class="glsv-btn-group" role="group" aria-label="Choose a letter"><button class="glsv-btn glsv-letter-btn" type="button" data-letter="A" aria-pressed="true">A</button> <button class="glsv-btn glsv-letter-btn" type="button" data-letter="a" aria-pressed="false">a</button></div><div class="glsv-btn-group" role="group" aria-label="Grid resolution"><button class="glsv-btn glsv-res-btn" type="button" data-res="16" aria-pressed="false">16</button> <button class="glsv-btn glsv-res-btn" type="button" data-res="32" aria-pressed="false">32</button> <button class="glsv-btn glsv-res-btn" type="button" data-res="64" aria-pressed="true">64</button></div><button class="glsv-btn" type="button" data-glsv-action="pause">pause</button> <button class="glsv-btn" type="button" data-glsv-action="restart">restart</button></div><div class="glsv-footer"><span class="glsv-legend">anchor control  |  drag any point to reshape the glyph. Click the letter again to reset it.</span> <span class="glsv-caption">row <span data-glsv-row="">0</span> / <span data-glsv-total-rows="">0 (I'll be honest, I did this with Claude Fable 5 because I was short on time and wanted a good visualization. I was the owner of the idea though, and I promise the article itself is mine, written by hand. I just used AI to check grammar.)</span></span></div></div><p><script>(function () {
+            var HOLD_TICKS = 14;
+            var TICK_MS = 55;
+            var CURVE_STEPS = 16;
+            var HIT_RADIUS = 14; // in canvas pixels
+
+            // --- Glyph point/curve data -------------------------------------------
+            // Each contour is { start:{x,y}, segs:[ {type:'L',x,y} | {type:'Q',cx,cy,x,y} ] }
+            // Coordinates live in a normalized 0-100 box. A separate contour is a
+            // separate closed loop; winding direction decides whether it adds to or
+            // cuts a hole out of the shape (this is how real glyph outlines work too).
+
+            function ovalContour(cx, cy, rx, ry, direction) {
+                var right = { x: cx + rx, y: cy };
+                var bottom = { x: cx, y: cy + ry };
+                var left = { x: cx - rx, y: cy };
+                var top = { x: cx, y: cy - ry };
+                if (direction === 'cw') {
+                    return {
+                        start: right,
+                        segs: [
+                            { type: 'Q', cx: cx + rx, cy: cy + ry, x: bottom.x, y: bottom.y },
+                            { type: 'Q', cx: cx - rx, cy: cy + ry, x: left.x, y: left.y },
+                            { type: 'Q', cx: cx - rx, cy: cy - ry, x: top.x, y: top.y },
+                            { type: 'Q', cx: cx + rx, cy: cy - ry, x: right.x, y: right.y }
+                        ]
+                    };
+                }
+                return {
+                    start: right,
+                    segs: [
+                        { type: 'Q', cx: cx + rx, cy: cy - ry, x: top.x, y: top.y },
+                        { type: 'Q', cx: cx - rx, cy: cy - ry, x: left.x, y: left.y },
+                        { type: 'Q', cx: cx - rx, cy: cy + ry, x: bottom.x, y: bottom.y },
+                        { type: 'Q', cx: cx + rx, cy: cy + ry, x: right.x, y: right.y }
+                    ]
+                };
+            }
+
+            var DEFAULTS = {
+                A: {
+                    contours: [
+                        {
+                            start: { x: 10, y: 94 },
+                            segs: [
+                                { type: 'L', x: 46, y: 6 },
+                                { type: 'L', x: 54, y: 6 },
+                                { type: 'L', x: 90, y: 94 },
+                                { type: 'L', x: 74, y: 94 },
+                                { type: 'L', x: 60, y: 58 },
+                                { type: 'L', x: 40, y: 58 },
+                                { type: 'L', x: 26, y: 94 }
+                            ]
+                        },
+                        {
+                            // counter (hole), wound opposite to the outer contour
+                            start: { x: 42, y: 50 },
+                            segs: [
+                                { type: 'L', x: 58, y: 50 },
+                                { type: 'L', x: 50, y: 16 }
+                            ]
+                        }
+                    ]
+                },
+                a: {
+                    contours: [
+                        ovalContour(40, 67, 27, 28, 'cw'),   // bowl, outer edge
+                        ovalContour(40, 67, 14, 15, 'ccw'),  // bowl counter (hole)
+                        {
+                            start: { x: 58, y: 39 },
+                            segs: [
+                                { type: 'L', x: 72, y: 39 },
+                                { type: 'L', x: 72, y: 94 },
+                                { type: 'L', x: 58, y: 94 }
+                            ]
+                        }
+                    ]
+                }
+            };
+
+            function cloneLetter(def) {
+                return JSON.parse(JSON.stringify(def));
+            }
+
+            // --- Geometry helpers ---------------------------------------------------
+
+            function flattenContour(contour, steps) {
+                var pts = [{ x: contour.start.x, y: contour.start.y }];
+                var prev = contour.start;
+                for (var i = 0; i < contour.segs.length; i++) {
+                    var seg = contour.segs[i];
+                    if (seg.type === 'L') {
+                        pts.push({ x: seg.x, y: seg.y });
+                    } else {
+                        for (var s = 1; s <= steps; s++) {
+                            var t = s / steps;
+                            var mt = 1 - t;
+                            pts.push({
+                                x: mt * mt * prev.x + 2 * mt * t * seg.cx + t * t * seg.x,
+                                y: mt * mt * prev.y + 2 * mt * t * seg.cy + t * t * seg.y
+                            });
+                        }
+                    }
+                    prev = seg;
+                }
+                return pts;
+            }
+
+            function windingNumber(pt, flatContours) {
+                var wn = 0;
+                for (var k = 0; k < flatContours.length; k++) {
+                    var verts = flatContours[k];
+                    for (var i = 0; i < verts.length; i++) {
+                        var a = verts[i];
+                        var b = verts[(i + 1) % verts.length];
+                        if (a.y <= pt.y) {
+                            if (b.y > pt.y) {
+                                var cross1 = (b.x - a.x) * (pt.y - a.y) - (pt.x - a.x) * (b.y - a.y);
+                                if (cross1 > 0) wn++;
+                            }
+                        } else if (b.y <= pt.y) {
+                            var cross2 = (b.x - a.x) * (pt.y - a.y) - (pt.x - a.x) * (b.y - a.y);
+                            if (cross2 < 0) wn--;
+                        }
+                    }
+                }
+                return wn;
+            }
+
+            function sampleGrid(letterDef, cols, rows) {
+                var flat = [];
+                for (var i = 0; i < letterDef.contours.length; i++) {
+                    flat.push(flattenContour(letterDef.contours[i], CURVE_STEPS));
+                }
+                var grid = [];
+                for (var r = 0; r < rows; r++) {
+                    var row = [];
+                    var y = ((r + 0.5) / rows) * 100;
+                    for (var c = 0; c < cols; c++) {
+                        var x = ((c + 0.5) / cols) * 100;
+                        row.push(windingNumber({ x: x, y: y }, flat) !== 0);
+                    }
+                    grid.push(row);
+                }
+                return grid;
+            }
+
+            // Collect draggable point references. Each entry holds the object and
+            // which keys on it are the x/y coordinates, so dragging mutates the
+            // glyph data directly.
+            function collectPoints(letterDef) {
+                var pts = [];
+                for (var i = 0; i < letterDef.contours.length; i++) {
+                    var c = letterDef.contours[i];
+                    pts.push({ obj: c.start, xKey: 'x', yKey: 'y', kind: 'anchor' });
+                    for (var j = 0; j < c.segs.length; j++) {
+                        var seg = c.segs[j];
+                        if (seg.type === 'Q') {
+                            pts.push({ obj: seg, xKey: 'cx', yKey: 'cy', kind: 'control' });
+                        }
+                        pts.push({ obj: seg, xKey: 'x', yKey: 'y', kind: 'anchor' });
+                    }
+                }
+                return pts;
+            }
+
+            // --- DOM setup -----------------------------------------------------------
+
+            var demo = document.getElementById('glsv-demo-1');
+            var canvas = demo.querySelector('.glsv-canvas');
+            var ctx = canvas.getContext('2d');
+            var pauseBtn = demo.querySelector('[data-glsv-action="pause"]');
+            var restartBtn = demo.querySelector('[data-glsv-action="restart"]');
+            var letterBtns = demo.querySelectorAll('.glsv-letter-btn');
+            var resBtns = demo.querySelectorAll('.glsv-res-btn');
+            var rowLabel = demo.querySelector('[data-glsv-row]');
+            var totalLabel = demo.querySelector('[data-glsv-total-rows]');
+
+            var gridRes = 64;
+            var currentLetterKey = 'A';
+            var letter = cloneLetter(DEFAULTS[currentLetterKey]);
+            var points = collectPoints(letter);
+            var grid = sampleGrid(letter, gridRes, gridRes);
+            var currentRow = 0;
+            var playing = true;
+            var timer = null;
+            var dragging = null;
+            var resamplePending = false;
+
+            totalLabel.textContent = gridRes;
+
+            // --- Coordinate mapping ----------------------------------------------
+
+            var PAD_FRAC = 0.06;
+            function pad() { return canvas.width * PAD_FRAC; }
+            function scale() { return (canvas.width - pad() * 2) / 100; }
+            function toCanvasX(x) { return pad() + x * scale(); }
+            function toCanvasY(y) { return pad() + y * scale(); }
+            function toGlyphX(px) { return (px - pad()) / scale(); }
+            function toGlyphY(py) { return (py - pad()) / scale(); }
+
+            function pointerToCanvas(ev) {
+                var rect = canvas.getBoundingClientRect();
+                var sx = canvas.width / rect.width;
+                var sy = canvas.height / rect.height;
+                return { x: (ev.clientX - rect.left) * sx, y: (ev.clientY - rect.top) * sy };
+            }
+
+            // --- Drawing ---------------------------------------------------------
+
+            function draw() {
+                var w = canvas.width;
+                var h = canvas.height;
+                var inner = w - pad() * 2;
+                var cellW = inner / gridRes;
+                var cellH = inner / gridRes;
+                var clampedRow = Math.min(currentRow, gridRes);
+
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, w, h);
+
+                // raster cells
+                for (var r = 0; r < gridRes; r++) {
+                    var revealed = r < clampedRow;
+                    for (var c = 0; c < gridRes; c++) {
+                        ctx.fillStyle = revealed && grid[r][c] ? '#3f3f3f' : '#141414';
+                        ctx.fillRect(
+                            pad() + c * cellW + 0.5,
+                            pad() + r * cellH + 0.5,
+                            Math.max(cellW - 1, 1),
+                            Math.max(cellH - 1, 1)
+                        );
+                    }
+                }
+
+                // scan line
+                if (clampedRow < gridRes) {
+                    var sy = pad() + clampedRow * cellH;
+                    ctx.fillStyle = 'rgba(110,224,110,0.30)';
+                    ctx.fillRect(pad(), sy, inner, cellH);
+                    ctx.strokeStyle = '#6ee06e';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(pad(), sy + cellH);
+                    ctx.lineTo(pad() + inner, sy + cellH);
+                    ctx.stroke();
+                }
+
+                // outline
+                ctx.beginPath();
+                for (var i = 0; i < letter.contours.length; i++) {
+                    var contour = letter.contours[i];
+                    ctx.moveTo(toCanvasX(contour.start.x), toCanvasY(contour.start.y));
+                    for (var j = 0; j < contour.segs.length; j++) {
+                        var seg = contour.segs[j];
+                        if (seg.type === 'L') {
+                            ctx.lineTo(toCanvasX(seg.x), toCanvasY(seg.y));
+                        } else {
+                            ctx.quadraticCurveTo(toCanvasX(seg.cx), toCanvasY(seg.cy), toCanvasX(seg.x), toCanvasY(seg.y));
+                        }
+                    }
+                    ctx.closePath();
+                }
+                ctx.strokeStyle = 'rgba(230,230,230,0.75)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // control handles (dashed) and points
+                for (var k = 0; k < letter.contours.length; k++) {
+                    var ct = letter.contours[k];
+                    var prev = ct.start;
+                    for (var m = 0; m < ct.segs.length; m++) {
+                        var s = ct.segs[m];
+                        if (s.type === 'Q') {
+                            ctx.setLineDash([2, 3]);
+                            ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(toCanvasX(prev.x), toCanvasY(prev.y));
+                            ctx.lineTo(toCanvasX(s.cx), toCanvasY(s.cy));
+                            ctx.lineTo(toCanvasX(s.x), toCanvasY(s.y));
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                        prev = s;
+                    }
+                }
+                for (var p = 0; p < points.length; p++) {
+                    var pt = points[p];
+                    var px = toCanvasX(pt.obj[pt.xKey]);
+                    var py = toCanvasY(pt.obj[pt.yKey]);
+                    var isDragged = dragging === pt;
+                    if (pt.kind === 'anchor') {
+                        ctx.beginPath();
+                        ctx.arc(px, py, isDragged ? 5 : 3.5, 0, Math.PI * 2);
+                        ctx.fillStyle = '#6ee06e';
+                        ctx.fill();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(px, py, isDragged ? 4.5 : 3, 0, Math.PI * 2);
+                        ctx.fillStyle = '#0a0a0a';
+                        ctx.fill();
+                        ctx.lineWidth = 1.4;
+                        ctx.strokeStyle = isDragged ? '#6ee06e' : 'rgba(255,255,255,0.6)';
+                        ctx.stroke();
+                    }
+                }
+
+                rowLabel.textContent = clampedRow;
+            }
+
+            // --- Playback ------------------------------------------------------------
+
+            function tick() {
+                draw();
+                currentRow++;
+                if (currentRow > gridRes + HOLD_TICKS) currentRow = 0;
+            }
+
+            function startTimer() {
+                clearInterval(timer);
+                timer = setInterval(tick, TICK_MS);
+            }
+
+            function stopTimer() {
+                clearInterval(timer);
+                timer = null;
+            }
+
+            function setPlaying(next) {
+                playing = next;
+                pauseBtn.textContent = playing ? 'pause' : 'play';
+                pauseBtn.setAttribute('aria-pressed', String(!playing));
+                if (playing) startTimer(); else stopTimer();
+            }
+
+            function restart() {
+                currentRow = 0;
+                draw();
+                setPlaying(true);
+            }
+
+            function resample() {
+                grid = sampleGrid(letter, gridRes, gridRes);
+            }
+
+            function selectLetter(key) {
+                // clicking the active letter resets it to its default shape
+                currentLetterKey = key;
+                letter = cloneLetter(DEFAULTS[key]);
+                points = collectPoints(letter);
+                resample();
+                currentRow = 0;
+                for (var i = 0; i < letterBtns.length; i++) {
+                    var btn = letterBtns[i];
+                    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-letter') === key));
+                }
+                draw();
+            }
+
+            function selectRes(res) {
+                if (res === gridRes) return;
+                gridRes = res;
+                totalLabel.textContent = gridRes;
+                resample();
+                if (currentRow > gridRes) currentRow = gridRes;
+                for (var i = 0; i < resBtns.length; i++) {
+                    var btn = resBtns[i];
+                    btn.setAttribute('aria-pressed', String(parseInt(btn.getAttribute('data-res'), 10) === res));
+                }
+                draw();
+            }
+
+            // --- Dragging --------------------------------------------------------
+
+            function hitTest(cx, cy) {
+                var best = null;
+                var bestD = HIT_RADIUS * HIT_RADIUS;
+                for (var i = 0; i < points.length; i++) {
+                    var pt = points[i];
+                    var dx = toCanvasX(pt.obj[pt.xKey]) - cx;
+                    var dy = toCanvasY(pt.obj[pt.yKey]) - cy;
+                    var d = dx * dx + dy * dy;
+                    if (d < bestD) {
+                        bestD = d;
+                        best = pt;
+                    }
+                }
+                return best;
+            }
+
+            canvas.addEventListener('pointerdown', function (ev) {
+                var pos = pointerToCanvas(ev);
+                var hit = hitTest(pos.x, pos.y);
+                if (!hit) return;
+                dragging = hit;
+                canvas.setPointerCapture(ev.pointerId);
+                // freeze the scan fully revealed so the effect of dragging is visible
+                setPlaying(false);
+                currentRow = gridRes;
+                draw();
+                ev.preventDefault();
+            });
+
+            canvas.addEventListener('pointermove', function (ev) {
+                if (!dragging) return;
+                var pos = pointerToCanvas(ev);
+                var gx = Math.max(0, Math.min(100, toGlyphX(pos.x)));
+                var gy = Math.max(0, Math.min(100, toGlyphY(pos.y)));
+                dragging.obj[dragging.xKey] = gx;
+                dragging.obj[dragging.yKey] = gy;
+                if (!resamplePending) {
+                    resamplePending = true;
+                    requestAnimationFrame(function () {
+                        resamplePending = false;
+                        resample();
+                        draw();
+                    });
+                }
+                ev.preventDefault();
+            });
+
+            function endDrag(ev) {
+                if (!dragging) return;
+                dragging = null;
+                resample();
+                draw();
+            }
+            canvas.addEventListener('pointerup', endDrag);
+            canvas.addEventListener('pointercancel', endDrag);
+
+            // --- Wire controls -----------------------------------------------------
+
+            pauseBtn.addEventListener('click', function () { setPlaying(!playing); });
+            restartBtn.addEventListener('click', restart);
+            for (var i = 0; i < letterBtns.length; i++) {
+                (function (btn) {
+                    btn.addEventListener('click', function () { selectLetter(btn.getAttribute('data-letter')); });
+                })(letterBtns[i]);
+            }
+            for (var j = 0; j < resBtns.length; j++) {
+                (function (btn) {
+                    btn.addEventListener('click', function () { selectRes(parseInt(btn.getAttribute('data-res'), 10)); });
+                })(resBtns[j]);
+            }
+
+            draw();
+            startTimer();
+        })();</script></p><p> </p><p>As shown in the example above, a glyph is a set of points (main points and control points) which create polygons, and the Scan Line basically just fills them in (with some math optimisations to avoid aliasing of course), </p><p>You may ask, why don't we do this on the GPU? If you think about it, it's a great question, but there are some caveats. Let's talk about the easiest approach: convert curves to vertices, then draw them in a single draw call. That will be a bit heavy even with caching. Another approach is to rasterize it through a compute shader. Even on paper that's a good approach, but there is an issue: the compute shader approach already exists as an enterprise algorithm called <strong><a href="https://sluglibrary.com/">Slug</a></strong>. So why don't we use it? This algorithm is so complex and so expensive that it's usually only used to render text in 3D, where the text needs to be big, clearly visible, and smooth. </p><p class="msg msg--highlight">Note that from this point I will talk about how I did it. Maybe it's not the most optimal solution, but it works great for me.</p><p>As I mentioned, each glyph has its own texture, but uploading all of this to the GPU as individual textures is very expensive. I built a glyph atlas that both the backend and the font manager agree on. The Font Manager defines an atlas with a width, a height, and a pointer to its pixels.  Something like this:</p><pre class="language-cpp"><code>class GlyphAtlas {
+public:
+    struct Slot {
+        int x = 0;
+        int y = 0;
+        int w = 0;
+        int h = 0;
+    };
+
+    GlyphAtlas(AtlasFormat format, int width, int initialHeight);
+    ~GlyphAtlas() = default;
+
+    void Reset();
+
+    const Slot* Add(std::uint64_t key, const std::uint8_t* pixels, int w, int h, int srcPitch);
+    [[nodiscard]] const Slot* Find(std::uint64_t key) const;
+
+private:
+    bool Reserve(int w, int h, Slot&amp; out);
+
+    AtlasFormat _format;
+    int _bpp;
+    int _width;
+    int _height;
+
+    std::vector&lt;std::uint8_t&gt; _pixels;
+    std::unordered_map&lt;std::uint64_t, Slot&gt; _slots;
+};</code></pre><p>We split this atlas into slots. We do not know how many slots the atlas will actually hold because it handles glyphs of all different sizes.</p><p>Previously, we talked about the load glyph function. Let's add it to the atlas. But first, let's talk about the Atlas Format. You see, FreeType's rasterized textures come in different types, but we only care about two of them:</p><ul><li><code>FT_PIXEL_MODE_GRAY</code> used for most glyphs like the text you're reading right now. We call this AtlasFormat::Coverage because it has a single channel that tells the GPU how white this pixel is.</li><li><code>FT_PIXEL_MODE_BGRA</code>: for things that are already colourful glyphs, like emojis  🚀 👾.  We call this AtlasFormat::Color because it's just a colourful texture.</li></ul><p class="msg msg--info">Keep in mind something about the Coverage format: the pixels vector is just $width \times height$. For the Color format, it's $width \times height \times 4$, where four is the number of channels, <strong>RGBA </strong>in a pixel.</p><p class="msg msg--info">Keep in mind also that we have two atlases, and both are used simultaneously and defined together so they do not interfere with each other.</p><p>That's still just a CPU texture. Let's upload it to the GPU. Assuming the atlas already exists, we do partial uploads by marking the areas that are dirty and uploading only those (I am not sure if your RHI supports it, but when I implemented my RHI, I kept that in mind).</p><h3>How to render all that?</h3><p>Let's have a real example: "<strong>Hello World! 👋" </strong>This example has two different kinds of glyphs.</p><p><strong>Coverage </strong>, which is <strong>"Hello World!" </strong>, is stored in the coverage atlas. When requested, we render it as a whole batch in a single draw call that contains all the vertices. Each vertex has its own position on the screen, the UV coordinate to fetch the needed glyph from the atlas, and the tint color.</p><p>Te final code will be like this</p><pre class="language-glsl"><code>float4 PSMain(VSOutput input) : SV_Target {
+    float clip = ClipCoverage(input.pos.xy);
+    if (gPush.mode == 0u) {
+        float a = gTex.Sample(gSampler, input.uv).r;
+        return float4(input.col.rgb, input.col.a * a * clip);
+    }
+}</code></pre><p>where input.col here means the tint color, we talked about clip coverage before, and the output is the tint colot but we control how visible the character from the coverage  (gray) channel.</p><p class="msg msg--info"><strong>Tint </strong>here means change the color of the glyph</p><p> </p><p><strong>Color</strong>, which is the <strong>👋 </strong>emoji, is not any different from Coverage, except that we add the texture's full set of channels into the equation, like this:</p><pre class="language-glsl"><code>float4 c = gTex.Sample(gSampler, input.uv) * input.col; // RGBA, modulated
+return float4(c.rgb, c.a * clip);</code></pre><p> </p><p>That's a screenshot of a demo in my UI framework. It looks magnificent don't you think</p><figure class="post__image"><img loading="lazy" src="https://alielmorsy.github.io/media/posts/13/Screenshot-2026-07-20-201134.png" alt="" width="1123" height="708" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/13/responsive/Screenshot-2026-07-20-201134-xs.png 300w, https://alielmorsy.github.io/media/posts/13/responsive/Screenshot-2026-07-20-201134-sm.png 480w, https://alielmorsy.github.io/media/posts/13/responsive/Screenshot-2026-07-20-201134-md.png 768w, https://alielmorsy.github.io/media/posts/13/responsive/Screenshot-2026-07-20-201134-lg.png 1024w"></figure><p> </p><hr><p>Now we talked a lot on how we rasterize glyphs. But we were only assuming Glyph = Character. That's not always correct as mentioned before. We need to do shaping. For this, we will use <strong>HarfBuzz </strong>which is an open source text shaping engine.</p><p>Let's define first a term called <strong>Codepoint</strong>. <strong>Codepoint </strong>is number Unicode assign to one abstract character.<br><br>Ex: "A" = U+0041 (65 decimal). "€" = U+20AC. Emoji 😀 = U+1F600.</p><h2>HarfBuzz</h2><p>HarfBuzz, as mentioned, is an open source text shaping engine, but what does this fancy term mean?</p><p>HarfBuzz answers a very simple yet important question: given a font,  the codepoints of a paragraph, and the language being used, which glyphs will be drawn? In other words, it handles ligatures.</p><h3>How does it work under the hood?</h3><p>Before it shapes anything, it needs some context to work with:</p><ul><li><strong>The Font: </strong>The font that used to render the text (Same font used in <strong>FreeType</strong>)</li><li><strong>The Direction:</strong> HarfBuzz needs the direction of the text, whether it's <strong>LTR </strong>(Left to Right) or <strong>RTL </strong>(Right to Left)</li><li><strong>The Script and Language: </strong>two separate settings, because shaping rules are script-specific. Latin, Arabic, Devanagari, and Han text all get shaped by different logic under the hood, and the language tag refines those rules further.</li></ul><h4>Step 1: Init HarfBuzz</h4><p>We already parsed the font file via <strong>FreeType</strong>. Now, we need to use it as a read-only font face inside <strong>HarfBuzz</strong></p><pre class="language-apacheconf"><code>struct FontSpec
+{
+    std::string family;
+    bool bold = false;
+    bool italic = false;
+};
+struct Face{
+    std::vector&lt;std::byte&gt; data;
+    FT_Face ft = nullptr;
+    hb_blob_t* blob = nullptr;
+    hb_face_t* face = nullptr;
+    hb_font_t* font = nullptr;
+    FontSpec spec;
+};
+
+....
+
+face-&gt;blob = hb_blob_create(data, size, HB_MEMORY_MODE_READONLY, ...);
+face-&gt;face = hb_face_create(face-&gt;blob, 0);
+face-&gt;font = hb_font_create(face-&gt;face);</code></pre><p>Where data is the raw binary of the font file.</p><p>Now the per text init. We will define the font scale and font PPEM (Pixel Per EM)</p><pre class="language-glsl"><code>hb_font_set_scale(face-&gt;font, px * 64, px * 64);
+hb_font_set_ppem(face-&gt;font, px, px);
+hb_buffer_clear_contents(shapeBuffer);</code></pre><p>In PPEM, we set the nominal size  of the font in actual pixels.</p><p>Now the tricky part. Why did we multiply the pixel scale by 64? Computers often handle decimal points roughly or slowly in graphics. To avoid this, typography systems use a format called <strong data-path-to-node="4,0,0" data-index-in-node="143">26.6 fixed-point math</strong>.</p><p>We also remove the content of the shape buffer to avoid creating it for every text. So, we keep reusing it.</p><h4>Step 2:  Use the Shape Buffer</h4><p>Before we talk about all of that. When I implemented my UI framework, I decided  to go with UTF-8 at first because it supports so many languages including <strong>Arabic </strong>(which is my main language) and it works well. In practice, <strong>HarfBuzz  </strong>supports UTF8, But we are using the UTF32 implementation because we are using other libraries like SheenBidi needs UTF32 (We will talk about it later). </p><p>We will decode the UTF-8 string into an array of codepoints. What is decoding, and why do we need it?</p><p>UTF-8 varies in size. For example, ASCII characters are 1 byte, but Arabic characters or emoji take 2-4 bytes. So, DecodeUTF8 walks the string byte by byte, but it needs to know, at each step, how many bytes the current character actually takes before it can move to the next one. It does that by looking at the very first byte of each character: UTF-8 encodes the byte count right into the leading bits.           </p><ul><li> If the byte starts with 0, it's plain ASCII — one byte, done.</li><li>If it starts with 110, that's the first byte of a 2-byte sequence.</li><li>1110 means a 3-byte sequence.</li><li>11110 means 4 bytes, and this is the range emoji live in.</li></ul><p>Once it knows the length, it pulls the meaningful bits out of the leading byte, then reads the remaining bytes (which all start with 10, marking them as "continuation" bytes) and folds their bits in to reconstruct the full Unicode codepoint — a single uint32_t number that represents that one character, regardless of how many bytes it took to encode.</p><p>The output of all this is two arrays: the decoded codepoints themselves, and a second array that remembers, for each codepoint, which byte offset it started at in the original UTF-8 string. This allows us to map back to the original text later if we ever need to.</p><pre class="language-apacheconf"><code>void DecodeUtf8(std::string_view s, std::vector&lt;std::uint32_t&gt;&amp; out, std::vector&lt;std::size_t&gt;&amp; bytes)
+{
+    out.clear();
+    bytes.clear();
+    out.reserve(s.size());
+    bytes.reserve(s.size() + 1);
+
+    const std::size_t n = s.size();
+    for (std::size_t i = 0; i &lt; n;)
+    {
+        const std::size_t start = i;
+        const auto c = static_cast&lt;unsigned char&gt;(s[i]);
+        std::uint32_t cp = 0;
+        int extra = 0;
+
+        if (c &lt; 0x80)
+        {
+            cp = c;
+            extra = 0;
+        }
+        else if ((c &gt;&gt; 5) == 0x6)
+        {
+            cp = c &amp; 0x1F;
+            extra = 1;
+        }
+        else if ((c &gt;&gt; 4) == 0xE)
+        {
+            cp = c &amp; 0x0F;
+            extra = 2;
+        }
+        else if ((c &gt;&gt; 3) == 0x1E)
+        {
+            cp = c &amp; 0x07;
+            extra = 3;
+        }
+        else
+        {
+            out.push_back(0xFFFD);
+            bytes.push_back(start);
+            ++i;
+            continue;
+        }
+
+        if (i + static_cast&lt;std::size_t&gt;(extra) &gt;= n)
+        {
+            out.push_back(0xFFFD);
+            bytes.push_back(start);
+            break;
+        }
+
+        bool ok = true;
+        for (int k = 0; k &lt; extra; ++k)
+        {
+            const auto cc = static_cast&lt;unsigned char&gt;(s[i + 1 + static_cast&lt;std::size_t&gt;(k)]);
+            if ((cc &amp; 0xC0) != 0x80)
+            {
+                ok = false;
+                break;
+            }
+            cp = (cp &lt;&lt; 6) | (cc &amp; 0x3F);
+        }
+
+        if (!ok)
+        {
+            out.push_back(0xFFFD);
+            bytes.push_back(start);
+            ++i;
+            continue;
+        }
+
+        out.push_back(cp);
+        bytes.push_back(start);
+        i += static_cast&lt;std::size_t&gt;(extra) + 1;
+    }
+
+    bytes.push_back(n);
+}
+
+// ...
+
+std::vector&lt;std::uint32_t&gt; cps;
+std::vector&lt;std::size_t&gt; cpBytes;
+DecodeUtf8(text, cps, cpBytes);</code></pre><p>We can use the output later via</p><pre class="language-cpp"><code>hb_buffer_add_utf32(shapeBuffer, cps.data(), n, 0,length);</code></pre><p>We continue with more configuration</p><pre class="language-cpp"><code>hb_buffer_set_direction(...);  // We default to LTR, or you can make it configurable
+hb_buffer_set_script(...);     // from the run's Unicode script
+hb_buffer_set_language(...);   // system default
+</code></pre><h4>Step 3: Shape It and Read the Results</h4><p>Now, the most important step: run the shaping engine and read the results back.</p><pre class="language-cpp"><code>hb_shape(rf-&gt;font, shapeBuffer, nullptr, 0);
+int length; // glyph count
+const hb_glyph_info_t* info = hb_buffer_get_glyph_infos(shapeBuffer, &amp;length);
+const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(shapeBuffer, &amp;length);</code></pre><p>From these outputs, we get the following information:</p><ul><li><code>info[i].codepoint</code> despite the name, this is the glyph index in FreeType glyphs array</li><li><code>pos[i].x_advance, y_advance</code> How much the line advances after drawing this glyph when setting this glyph in horizontal/vertical line.</li><li><code>pos[i].x_offset, y_offset</code> How much the glyph moves on x and y axis before drawing it (That's in local coordinates where the first glyph rendered in (0,0) )</li></ul><p class="msg msg--info">Remember, above we were multiplying the scale by 64. Now we have to divide by it to undo the 26.6 fixed point. We do it for both the advance and the offset.</p><p> </p><hr><p>Maybe all that didn't sync up together for you, right? Let's sync it up. Here is what happens in order, how, and why:</p><ul><li>We load a font, store its bytes in a vector, and load it into both <strong>FreeType</strong> and <strong>HarfBuzz</strong>.</li><li>When we want to display text of any size, we measure it first to know how much space it will need, by doing the following:<ul><li>Decode the UTF-8 string into codepoints</li><li>Pass the decoded codepoints to <strong>HarfBuzz</strong>, along with other options like language, direction, and scale</li><li>From <strong>HarfBuzz </strong>'s output, we can calculate how much space will be needed to render this text</li><li>Cache the output to avoid recalculating it, since it will also be used during rendering</li></ul></li><li>After measuring, we load the glyph indices from the cache and rasterize them via <strong>FreeType</strong>. </li><li>We take the output bitmap and store it in an atlas of the matching format (Coverage or Color)</li><li>We build a batch of quads to draw into a single draw call. Each vertex has the absolute position on screen, its UV coordinate from the atlas, and a tint color if needed.</li><li>If the atlas, or parts of it, are dirty, we upload the dirty parts to the GPU</li><li>Bind vertices + indices of this batch and call DrawIndexed </li></ul><p> </p><p>And that's it people. Cheer up, now we have basic anti-aliasing, optimized text rendering (I guess). In the next article, we may talk about how I use other libraries like <strong>SheenBidi </strong>to figure out which parts of the text are LTR and which are RTL, and <strong>libunibreak </strong>to work out where a line is actually allowed to break.</p></div><footer class="wrapper post__footer"><p class="post__last-updated">This article was updated on July 20, 2026</p><div class="post__share"></div></footer><nav class="pagination"><div class="pagination__title"><span>Read other posts</span></div><div class="pagination__buttons"><a href="https://alielmorsy.github.io/how-to-build-ui-elements/" class="btn previous" rel="prev" aria-label="[MISSING TRANSLATION]:  How to build UI Elements (Rectangles) "><span class="btn__icon">←</span> <span class="btn__text">How to build UI Elements (Rectangles)</span></a></div></nav></article></main><footer class="footer"><div class="footer__inner"><div class="footer__copyright"><footer class="site-footer"><p>© 2024 Powered by Publii CMS :: <a href="https://github.com/panr/hugo-theme-terminal" target="_blank" rel="noopener">Theme</a> ported by the <a href="https://getpublii.com/customization-service/" target="_blank" rel="noopener">Publii Team</a></p></footer></div><div class="footer__social"><a href="https://www.linkedin.com/in/alielmorsy/" aria-label="LinkedIn"><svg><use xlink:href="https://alielmorsy.github.io/assets/svg/svg-map.svg#linkedin"/></svg></a></div></div></footer></div><script defer="defer" src="https://alielmorsy.github.io/assets/js/scripts.min.js?v=c2232aa7558e9517946129d2a1b8c770"></script><script defer="defer" src="https://alielmorsy.github.io/assets/js/prism.js?v=a66d6cdbe9ea6f882549bfc3bff9bde4"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js" defer="defer"></script><script>window.publiiThemeMenuConfig={mobileMenuMode:'sidebar',animationSpeed:300,submenuWidth: 'auto',doubleClickTime:500,mobileMenuExpandableSubmenus:true,relatedContainerForOverlayMenuSelector:'.top'};</script><script>var images = document.querySelectorAll('img[loading]');
+        for (var i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                images[i].classList.add('is-loaded');
+            } else {
+                images[i].addEventListener('load', function () {
+                    this.classList.add('is-loaded');
+                }, false);
+            }
+        }</script><script>window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};</script></body></html>
