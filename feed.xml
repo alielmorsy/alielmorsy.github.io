@@ -3,12 +3,1341 @@
     <title>alielmorsy</title>
     <link href="https://alielmorsy.github.io/feed.xml" rel="self" />
     <link href="https://alielmorsy.github.io" />
-    <updated>2026-07-20T23:05:48+03:00</updated>
+    <updated>2026-10-15T16:18:33+03:00</updated>
     <author>
         <name>Ali Elmorsy</name>
     </author>
     <id>https://alielmorsy.github.io</id>
 
+    <entry>
+        <title>The secret sauce of infinite world</title>
+        <author>
+            <name>Ali Elmorsy</name>
+        </author>
+        <link href="https://alielmorsy.github.io/the-secret-sauce-of-infinite-world/"/>
+        <id>https://alielmorsy.github.io/the-secret-sauce-of-infinite-world/</id>
+            <category term="Unreal"/>
+            <category term="Streaming"/>
+            <category term="Rendering "/>
+            <category term="Rasterization"/>
+            <category term="LODs"/>
+            <category term=" Game Development"/>
+
+        <updated>2026-10-15T13:13:30+03:00</updated>
+            <summary>
+                <![CDATA[
+                    Everyone has played at least one GTA game in their life. I started with GTA: Vice City back when I was 10 years old. I&hellip;
+                ]]>
+            </summary>
+        <content type="html">
+            <![CDATA[
+                <p>Everyone has played at least one GTA game in their life. I started with <i>GTA: Vice City</i> back when I was 10 years old. I was fascinated by how a game could hold all those buildings, characters, and everything else, and how it all worked seamlessly on just 1GB of RAM. I was amazed, but I didn't think much of it at the time. When I got older and started learning about graphics, that was one of the first things I felt I had to understand—even if I never ended up using it, just to know how it worked. Even though modern GPUs have vastly more VRAM, we're still constrained by memory budgets; we can't just load all meshes at once.</p>
+<p>Let's ignore how it really works for a second. If you were building a streaming world without the internet, how would you do it?... You guessed right: split the world into small scenes. For each scene, give it a position in your main game world and a bounding box. When the player steps inside that bounding box, load the scene.</p>
+<p>Well, that sounds right, but doing that naively for every single region gets heavy fast. Imagine having 100 regions in your world (making regions small, but not tiny, is a good approach to avoid high memory bandwidth spikes). Every single frame, you would be forced to test the player against all 100 regions.</p>
+<p class="msg msg--highlight">I know the CPU can do 100 checks in an instant, but in computer graphics you have a strict frame budget for everything if you want to hold a stable 60 FPS.</p>
+<p>Luckily, we have a data structure built for this exact use case: <strong>AABB BVH</strong> (<strong>Axis-Aligned Bounding Box Bounding Volume Hierarchy</strong>). It's a common technique used heavily in physics engines to test colliders because, again, if you have 5,000 entities with colliders in your scene, testing against every single entity every frame will kill your framerate.</p>
+<h2>AABB BVH</h2>
+<p><strong>BVH</strong> is a tree-based data structure whose main job is to quickly test a query volume (like a ray in physics, or a sphere around the player in our streaming system) against bounding boxes.</p>
+<p>Before going through how this tree is built, let's look at how querying it actually works:</p>
+<ul>
+<li><strong>Test Node:</strong> Check if our query volume (or ray) intersects with the bounding box of the current node.</li>
+<li><strong>Cull:</strong> If the query misses the bounding box of the node, the entire subtree under it is skipped (culled) right away.</li>
+<li><strong>Traverse Hits:</strong> If the query intersects, we keep testing the child nodes down the tree until we reach a leaf.</li>
+</ul>
+<p>The concept is pretty simple. Now, how does a BVH pull this off? It relies on two main components:</p>
+<ul>
+<li><strong>AABB (Axis-Aligned Bounding Box):</strong> In plain English, an AABB is a rectangular box that never rotates. Because it stays aligned to the world axes, it can be defined by just two points:</li>
+</ul>
+<p>$$\mathbf{P}_{\min} = \begin{pmatrix} x_{\min} \\ y_{\min} \\ z_{\min} \end{pmatrix} \qquad \mathbf{P}_{\max} = \begin{pmatrix} x_{\max} \\ y_{\max} \\ z_{\max} \end{pmatrix}$$</p>
+<div class="canvas-wrap"><canvas id="aabb-canvas" style="display: block; width: 100%; max-width: 680px; margin: 0 auto; border: 1px solid var(--border); cursor: grab; border-radius: 2px;" width="680" height="480"></canvas>
+<div class="canvas-legend" style="display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 12px; font-size: 12px; justify-content: center;"><span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot dot--red" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--red);"></i> P<sub>min</sub> </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot dot--cyan" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--cyan);"></i> P<sub>max</sub> </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot dot--yellow" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--yellow);"></i> Test Point </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot dot--green" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green);"></i> Edges </span></div>
+<p class="canvas-hint" style="text-align: center; font-size: 11px; color: var(--fg-dim); margin-top: 8px;">drag a point to move it · drag empty space to rotate</p>
+<div id="readout" class="readout" style="display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; font-size: 12px; font-family: var(--font-mono); justify-content: center;"></div>
+<div id="test-breakdown" class="test-breakdown" style="margin: 16px 0 0; font-size: 13px; font-family: var(--font-mono); background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;"></div>
+</div>
+<p>
+<script>
+		(function() {
+			'use strict';
+
+			/* ── helpers ── */
+			function v3(x, y, z) {
+				return [x, y, z];
+			}
+
+			function v3add(a, b) {
+				return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+			}
+
+			function v3scale(a, s) {
+				return [a[0] * s, a[1] * s, a[2] * s];
+			}
+
+			function v3clamp(v, lo, hi) {
+				return [
+					Math.max(lo, Math.min(hi, v[0])),
+					Math.max(lo, Math.min(hi, v[1])),
+					Math.max(lo, Math.min(hi, v[2]))
+				];
+			}
+
+			function fmtN(n) {
+				return n.toFixed(2);
+			}
+
+			/* ── factory ── */
+			function createAABBInspector(canvas, readoutEl, breakdownEl, opts) {
+				opts = opts || {};
+				var ctx = canvas.getContext('2d');
+				var DPR = window.devicePixelRatio || 1;
+				var W, H, cx, cy;
+
+				function resize() {
+					var rect = canvas.getBoundingClientRect();
+					W = Math.round(rect.width * DPR);
+					H = Math.round(rect.height * DPR);
+					canvas.width = W;
+					canvas.height = H;
+					cx = W / 2;
+					cy = H / 2;
+				}
+				resize();
+
+				var scale = opts.scale || (W * 0.14);
+				var COL = {
+					edge: '#39ff14',
+					edgeFail: '#ff4444',
+					min: '#ff4444',
+					max: '#00e5ff',
+					test: '#ffe066',
+					axis: '#444',
+					axisLabel: '#555',
+					bg: '#111',
+					hoverRing: '#fff'
+				};
+
+				/* ── state ── */
+				var angleX = -0.42,
+					angleY = 0.7;
+				var pMin = v3(-1.0, -0.6, -0.8);
+				var pMax = v3(1.0, 0.6, 0.8);
+				var pTest = v3(0.3, 0.2, 0.0);
+
+				var dragging = false;
+				var dragTarget = null;
+				var lastSX = 0,
+					lastSY = 0;
+				var hoverTarget = null;
+
+				var HANDLE_RADIUS = 8 * DPR;
+				var HIT_RADIUS = 18 * DPR;
+
+				/* ── projection ── */
+				function project(x, y, z) {
+					var cosY = Math.cos(angleY),
+						sinY = Math.sin(angleY);
+					var x1 = x * cosY - z * sinY;
+					var z1 = x * sinY + z * cosY;
+					var cosX = Math.cos(angleX),
+						sinX = Math.sin(angleX);
+					var y1 = y * cosX - z1 * sinX;
+					return {
+						x: cx + x1 * scale,
+						y: cy - y1 * scale
+					};
+				}
+
+				function projectV(v) {
+					return project(v[0], v[1], v[2]);
+				}
+
+				function screenToWorldDelta(dx, dy) {
+					var cosY = Math.cos(angleY),
+						sinY = Math.sin(angleY);
+					var cosX = Math.cos(angleX),
+						sinX = Math.sin(angleX);
+					var rx = cosY,
+						ry = 0,
+						rz = sinY;
+					var ux = -sinY * sinX,
+						uy = cosX,
+						uz = cosY * sinX;
+					var ddx = dx / scale,
+						ddy = -dy / scale;
+					return [
+						rx * ddx + ux * ddy,
+						ry * ddx + uy * ddy,
+						rz * ddx + uz * ddy
+					];
+				}
+
+				/* ── drawing ── */
+				function line3d(ax, ay, az, bx, by, bz, color, dash, lw) {
+					var a = project(ax, ay, az),
+						b = project(bx, by, bz);
+					ctx.strokeStyle = color;
+					ctx.lineWidth = (lw || 1.5) * DPR;
+					ctx.setLineDash(dash ? dash.map(function(d) {
+						return d * DPR;
+					}) : []);
+					ctx.beginPath();
+					ctx.moveTo(a.x, a.y);
+					ctx.lineTo(b.x, b.y);
+					ctx.stroke();
+					ctx.setLineDash([]);
+				}
+
+				function dot3d(v, color, r, label, isHover) {
+					var p = projectV(v);
+					if (isHover) {
+						ctx.strokeStyle = COL.hoverRing;
+						ctx.lineWidth = 2 * DPR;
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, (r + 5) * DPR, 0, Math.PI * 2);
+						ctx.stroke();
+					}
+					ctx.fillStyle = color;
+					ctx.beginPath();
+					ctx.arc(p.x, p.y, r * DPR, 0, Math.PI * 2);
+					ctx.fill();
+					if (label) {
+						ctx.fillStyle = color;
+						ctx.font = (12 * DPR) + 'px Courier New, monospace';
+						ctx.fillText(label, p.x + 10 * DPR, p.y - 10 * DPR);
+					}
+				}
+
+				function isInside() {
+					return pTest[0] >= pMin[0] && pTest[0] <= pMax[0] &&
+						pTest[1] >= pMin[1] && pTest[1] <= pMax[1] &&
+						pTest[2] >= pMin[2] && pTest[2] <= pMax[2];
+				}
+
+				function axisPass(i) {
+					return pTest[i] >= pMin[i] && pTest[i] <= pMax[i];
+				}
+
+				function draw() {
+					ctx.clearRect(0, 0, W, H);
+					ctx.fillStyle = COL.bg;
+					ctx.fillRect(0, 0, W, H);
+
+					var mn = pMin,
+						mx = pMax;
+					var inside = isInside();
+					var edgeCol = inside ? COL.edge : COL.edgeFail;
+
+					// axes
+					var AL = 2.2;
+					line3d(-AL, 0, 0, AL, 0, 0, COL.axis, [5, 5], 1);
+					line3d(0, -AL, 0, 0, AL, 0, COL.axis, [5, 5], 1);
+					line3d(0, 0, -AL, 0, 0, AL, COL.axis, [5, 5], 1);
+					var labels = [
+						['X', AL + 0.1, 0, 0],
+						['Y', 0, AL + 0.1, 0],
+						['Z', 0, 0, AL + 0.1]
+					];
+					ctx.font = 'bold ' + (13 * DPR) + 'px Courier New, monospace';
+					for (var li = 0; li < labels.length; li++) {
+						var lbl = labels[li];
+						var lp = project(lbl[1], lbl[2], lbl[3]);
+						ctx.fillStyle = COL.axisLabel;
+						ctx.fillText(lbl[0], lp.x + 4 * DPR, lp.y - 4 * DPR);
+					}
+
+					// 12 edges
+					var edges = [
+						[mn[0], mn[1], mn[2], mx[0], mn[1], mn[2]],
+						[mx[0], mn[1], mn[2], mx[0], mn[1], mx[2]],
+						[mx[0], mn[1], mx[2], mn[0], mn[1], mx[2]],
+						[mn[0], mn[1], mx[2], mn[0], mn[1], mn[2]],
+						[mn[0], mx[1], mn[2], mx[0], mx[1], mn[2]],
+						[mx[0], mx[1], mn[2], mx[0], mx[1], mx[2]],
+						[mx[0], mx[1], mx[2], mn[0], mx[1], mx[2]],
+						[mn[0], mx[1], mx[2], mn[0], mx[1], mn[2]],
+						[mn[0], mn[1], mn[2], mn[0], mx[1], mn[2]],
+						[mx[0], mn[1], mn[2], mx[0], mx[1], mn[2]],
+						[mx[0], mn[1], mx[2], mx[0], mx[1], mx[2]],
+						[mn[0], mn[1], mx[2], mn[0], mx[1], mx[2]],
+					];
+					for (var ei = 0; ei < edges.length; ei++) {
+						var e = edges[ei];
+						line3d(e[0], e[1], e[2], e[3], e[4], e[5], edgeCol, null, 1.5);
+					}
+
+					// points
+					dot3d(pMin, COL.min, 7, 'Pmin(' + fmtN(mn[0]) + ',' + fmtN(mn[1]) + ',' + fmtN(mn[2]) + ')', hoverTarget === 'pmin');
+					dot3d(pMax, COL.max, 7, 'Pmax(' + fmtN(mx[0]) + ',' + fmtN(mx[1]) + ',' + fmtN(mx[2]) + ')', hoverTarget === 'pmax');
+					dot3d(pTest, COL.test, 7, 'P(' + fmtN(pTest[0]) + ',' + fmtN(pTest[1]) + ',' + fmtN(pTest[2]) + ')', hoverTarget === 'test');
+
+					// status badge
+					var badge = inside ? 'INSIDE' : 'OUTSIDE';
+					var badgeCol = inside ? COL.edge : COL.edgeFail;
+					ctx.font = 'bold ' + (14 * DPR) + 'px Courier New, monospace';
+					ctx.fillStyle = badgeCol;
+					ctx.fillText('[ ' + badge + ' ]', 12 * DPR, 24 * DPR);
+
+					updateReadout();
+					updateBreakdown();
+				}
+
+				function updateReadout() {
+					var names = ['X', 'Y', 'Z'];
+					var html = '';
+					for (var i = 0; i < 3; i++) {
+						var pass = axisPass(i);
+						var bColor = pass ? 'var(--green)' : 'var(--red)';
+						html += '<span style="color: var(--fg-dim);">';
+						html += names[i] + ': <b style="font-weight: 700; color: ' + bColor + ';">' + fmtN(pMin[i]) + ' &le; ' + fmtN(pTest[i]) + ' &le; ' + fmtN(pMax[i]);
+						html += pass ? ' &#10003;' : ' &#10007;';
+						html += '</b></span>';
+					}
+					readoutEl.innerHTML = html;
+				}
+
+				function updateBreakdown() {
+					var names = ['X', 'Y', 'Z'];
+					var allPass = true;
+					var html = '';
+					for (var i = 0; i < 3; i++) {
+						var pass = axisPass(i);
+						if (!pass) allPass = false;
+						var symColor = pass ? 'var(--green)' : 'var(--red)';
+						var sym = pass ? 'PASS' : 'FAIL';
+						html += '<div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">';
+						html += '<span style="color: ' + symColor + ';">[' + sym + ']</span> ';
+						html += names[i] + '-axis: ' + fmtN(pMin[i]) + ' &le; ' + fmtN(pTest[i]) + ' &le; ' + fmtN(pMax[i]);
+						html += '</div>';
+					}
+					var rColor = allPass ? 'var(--green)' : 'var(--red)';
+					html += '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 700; color: ' + rColor + ';">';
+					html += allPass ?
+						'&gt; all axes pass -&gt; point is INSIDE the AABB' :
+						'&gt; at least one axis fails -&gt; point is OUTSIDE the AABB';
+					html += '</div>';
+					breakdownEl.innerHTML = html;
+				}
+
+				/* ── hit testing ── */
+				function nearestHandle(sx, sy) {
+					var targets = [{
+							key: 'pmin',
+							pos: pMin
+						},
+						{
+							key: 'pmax',
+							pos: pMax
+						},
+						{
+							key: 'test',
+							pos: pTest
+						}
+					];
+					var best = null,
+						bestD = HIT_RADIUS;
+					for (var i = 0; i < targets.length; i++) {
+						var p = projectV(targets[i].pos);
+						var dx = sx - p.x,
+							dy = sy - p.y;
+						var d = Math.sqrt(dx * dx + dy * dy);
+						if (d < bestD) {
+							bestD = d;
+							best = targets[i].key;
+						}
+					}
+					return best;
+				}
+
+				/* ── events ── */
+				function coords(e) {
+					var rect = canvas.getBoundingClientRect();
+					var t = e.touches ? e.touches[0] : e;
+					return {
+						x: (t.clientX - rect.left) * DPR,
+						y: (t.clientY - rect.top) * DPR
+					};
+				}
+
+				function onDown(e) {
+					e.preventDefault();
+					var c = coords(e);
+					lastSX = c.x;
+					lastSY = c.y;
+					var hit = nearestHandle(c.x, c.y);
+					if (hit) {
+						dragTarget = hit;
+						canvas.style.cursor = 'grabbing';
+					} else {
+						dragTarget = 'rotate';
+						canvas.style.cursor = 'grabbing';
+					}
+					dragging = true;
+				}
+
+				function onMove(e) {
+					var c = coords(e);
+					if (!dragging) {
+						var h = nearestHandle(c.x, c.y);
+						hoverTarget = h;
+						canvas.style.cursor = h ? 'pointer' : 'grab';
+						draw();
+						return;
+					}
+					e.preventDefault();
+					var dx = c.x - lastSX,
+						dy = c.y - lastSY;
+					lastSX = c.x;
+					lastSY = c.y;
+
+					if (dragTarget === 'rotate') {
+						angleY += dx * 0.005;
+						angleX += dy * 0.005;
+						angleX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, angleX));
+						scale = W * 0.14;
+					} else {
+						var wd = screenToWorldDelta(dx, dy);
+						var CLAMP = 2.5;
+						if (dragTarget === 'pmin') {
+							pMin = v3clamp(v3add(pMin, wd), -CLAMP, CLAMP);
+							for (var i = 0; i < 3; i++)
+								if (pMin[i] > pMax[i] - 0.05) pMin[i] = pMax[i] - 0.05;
+						} else if (dragTarget === 'pmax') {
+							pMax = v3clamp(v3add(pMax, wd), -CLAMP, CLAMP);
+							for (var i = 0; i < 3; i++)
+								if (pMax[i] < pMin[i] + 0.05) pMax[i] = pMin[i] + 0.05;
+						} else if (dragTarget === 'test') {
+							pTest = v3clamp(v3add(pTest, wd), -CLAMP, CLAMP);
+						}
+					}
+					draw();
+				}
+
+				function onUp() {
+					dragging = false;
+					dragTarget = null;
+					canvas.style.cursor = 'grab';
+				}
+
+				canvas.addEventListener('mousedown', onDown);
+				window.addEventListener('mousemove', onMove);
+				window.addEventListener('mouseup', onUp);
+				canvas.addEventListener('touchstart', onDown, {
+					passive: false
+				});
+				canvas.addEventListener('touchmove', onMove, {
+					passive: false
+				});
+				window.addEventListener('touchend', onUp);
+
+				window.addEventListener('resize', function() {
+					resize();
+					scale = W * 0.14;
+					draw();
+				});
+
+				/* ── public ── */
+				draw();
+
+				return {
+					setBox: function(mn, mx) {
+						pMin = mn;
+						pMax = mx;
+						draw();
+					},
+					setTest: function(p) {
+						pTest = p;
+						draw();
+					},
+					draw: draw
+				};
+			}
+
+			/* ── init ── */
+			createAABBInspector(
+				document.getElementById('aabb-canvas'),
+				document.getElementById('readout'),
+				document.getElementById('test-breakdown')
+			);
+		})();
+	</script>
+</p>
+<ul>
+<li><strong>BVH (Bounding Volume Hierarchy):</strong> A binary tree where:
+<ul>
+<li><strong>Root Node:</strong> A single bounding box enclosing all regions in the world.</li>
+<li><strong>Internal Nodes:</strong> Bounding boxes that tightly enclose the union of their two child nodes.</li>
+<li><strong>Leaf Nodes:</strong> Bounding boxes containing the actual primitives (world regions in our case).</li>
+</ul>
+</li>
+</ul>
+<p>There are several ways to build a BVH tree. I went with a <strong>Top-Down Median Split</strong> along the longest centroid axis. Here is how it works step by step:</p>
+<ul>
+<li><strong>1. Enclose Everything &amp; Find Centroids:</strong> We start at the root node with all world regions in a single flat array. For the current range of regions <code>[begin, end)</code>, we loop through them once to compute two boxes:
+<ul>
+<li><strong>Node AABB (<code>bounds</code>):</strong> The tight bounding box enclosing all regions in this node.</li>
+<li><strong>Centroid Bounds (<code>centerMin</code>, <code>centerMax</code>):</strong> A bounding box enclosing only the <em>center points</em> of those regions: $$\mathbf{C} = (\mathbf{P}_{\min} + \mathbf{P}_{\max}) \times 0.5$$</li>
+</ul>
+</li>
+<li><strong>2. Pick the Split Axis:</strong> We check how spread out the region centers are by computing the centroid extent: $$\mathbf{E} = \mathbf{C}_{\max} - \mathbf{C}_{\min}$$ Whichever axis ($X$, $Y$, or $Z$) has the largest extent becomes our split axis. Splitting along the longest axis keeps the boxes roughly cube-shaped instead of turning them into long, thin slivers (which are terrible for culling).</li>
+<li><strong>3. Check the Leaf Condition:</strong> If the number of regions left in this node is small enough (<code>count &lt;= kLeafSize</code>) or all their centers sit on the exact same point (<code>extent[axis] &lt;= 0</code>), we stop splitting and mark this node as a <strong>Leaf Node</strong> pointing directly to those regions.</li>
+<li><strong>4. Partition Around the Median (<code>std::nth_element</code>):</strong> Instead of running a full $O(N \log N)$ sort at every step, we grab the middle index <code>middle = begin + count / 2</code> and use C++'s <code>std::nth_element</code> ($O(N)$ average time) to partition our regions in-place along the chosen axis:
+<ul>
+<li><strong>Left Half <code>[begin, middle)</code>:</strong> Regions whose centers sit on the lower side of the median.</li>
+<li><strong>Right Half <code>[middle, end)</code>:</strong> Regions whose centers sit on the upper side of the median.</li>
+</ul>
+</li>
+<li><strong>5. Allocate Contiguous Children &amp; Recurse:</strong> To keep the tree cache-friendly without pointer chasing, all nodes live inside a flat <code>std::vector&lt;Node&gt;</code>. We push two new child nodes at <code>left</code> and <code>left + 1</code>, set the current node's <code>count = 0</code> (which flags it as an internal node where <code>first</code> points to <code>left</code>), and recursively call <code>Subdivide</code> on both halves.</li>
+</ul>
+<h2>Traversing the Tree (Sphere Query)</h2>
+<p>Once the tree is built, streaming our world is just a matter of placing a sphere around the player (with a radius equal to our streaming distance) and querying the BVH each frame using an iterative stack:</p>
+<ul>
+<li><strong>Closest-Point Distance Check:</strong> To test if a sphere with center $\mathbf{P}$ and radius $r$ touches a node's AABB, we clamp $\mathbf{P}$ to the box's $[\mathbf{P}_{\min}, \mathbf{P}_{\max}]$ bounds to get the closest point on the box, then check if the squared distance is within $r^2$: $$\mathbf{\Delta} = \mathbf{P} - \operatorname{clamp}(\mathbf{P}, \mathbf{P}_{\min}, \mathbf{P}_{\max}), \qquad \mathbf{\Delta} \cdot \mathbf{\Delta} \le r^2$$</li>
+<li><strong>Subtree Culling:</strong> We pop a node from our fixed-size stack. If $\mathbf{\Delta} \cdot \mathbf{\Delta} &gt; r^2$, the player is too far away, so we immediately <strong>skip (cull)</strong> this node and all regions buried inside its subtree.</li>
+<li><strong>Drill Down to Leaves:</strong> If it intersects and is an internal node (<code>count == 0</code>), we push its two children onto the stack. If it's a leaf (<code>count &gt; 0</code>), we test the individual regions inside and stream in the hits.</li>
+</ul>
+<div class="canvas-wrap">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; font-family: var(--font-mono); font-size: 12px;"><button id="bvh-step-prev" style="background: var(--bg3); color: inherit; border: 1px solid var(--border); padding: 4px 10px; cursor: pointer; border-radius: 2px; font-family: inherit;">[ - Build Depth ]</button> <span id="bvh-depth-label" style="display: inline-flex; align-items: center; padding: 0 8px; color: var(--fg-dim);">Depth: Full</span> <button id="bvh-step-next" style="background: var(--bg3); color: inherit; border: 1px solid var(--border); padding: 4px 10px; cursor: pointer; border-radius: 2px; font-family: inherit;">[ + Build Depth ]</button> <button id="bvh-regen" style="background: var(--bg3); color: inherit; border: 1px solid var(--border); padding: 4px 10px; cursor: pointer; border-radius: 2px; font-family: inherit;">[ Reseed Regions ]</button></div>
+<canvas id="bvh-canvas" style="display: block; width: 100%; max-width: 680px; margin: 0 auto; border: 1px solid var(--border); cursor: grab; border-radius: 2px;" width="680" height="440"></canvas>
+<div class="canvas-legend" style="display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 12px; font-size: 12px; justify-content: center;"><span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--yellow);"></i> Player Query Sphere </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green);"></i> Traversed Node AABB </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--red);"></i> Culled Subtree </span> <span style="display: inline-flex; align-items: center; gap: 5px;"> <i class="dot" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--cyan);"></i> Loaded Region (Hit) </span></div>
+<p class="canvas-hint" style="text-align: center; font-size: 11px; color: var(--fg-dim); margin-top: 8px;">drag yellow center to move player · drag sphere rim to resize radius · use buttons above to step through build splits</p>
+<div id="bvh-readout" class="readout" style="display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; font-size: 12px; font-family: var(--font-mono); justify-content: center;"></div>
+<div id="bvh-breakdown" class="test-breakdown" style="margin: 16px 0 0; font-size: 13px; font-family: var(--font-mono); background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;"></div>
+</div>
+<p>
+<script>
+		(function() {
+			'use strict';
+
+			function clamp(v, lo, hi) {
+				return Math.max(lo, Math.min(hi, v));
+			}
+
+			function createBVHInspector(canvas, readoutEl, breakdownEl, depthLabelEl, btnPrev, btnNext, btnRegen) {
+				var ctx = canvas.getContext('2d');
+				var DPR = window.devicePixelRatio || 1;
+				var W, H;
+
+				var COL = {
+					bg: '#111',
+					panelSep: '#2a2a2a',
+					edgeHit: '#39ff14',
+					edgeCull: '#ff4444',
+					edgeIdle: '#3a3a3a',
+					regionIdle: '#555',
+					regionHit: '#00e5ff',
+					query: '#ffe066',
+					splitAxis: '#ff4444',
+					text: '#ccc',
+					textDim: '#666'
+				};
+
+				var LEAF_SIZE = 1;
+				var NUM_REGIONS = 8;
+				var items = [];
+				var nodes = [];
+				var maxTreeDepth = 0;
+				var visibleBuildDepth = 99;
+
+				// Query sphere in normalized [0..1] world coords
+				var queryCenter = [0.32, 0.45];
+				var queryRadius = 0.18;
+
+				var dragging = null; // 'center' | 'radius' | null
+				var hoverTarget = null;
+
+				function resize() {
+					var rect = canvas.getBoundingClientRect();
+					W = Math.round(rect.width * DPR);
+					H = Math.round(rect.height * DPR);
+					canvas.width = W;
+					canvas.height = H;
+				}
+				resize();
+
+				/* ── Generate World Regions (Items) ── */
+				var seed = 42;
+
+				function rand() {
+					seed = (seed * 1664525 + 1013904223) % 4294967296;
+					return seed / 4294967296;
+				}
+
+				function generateRegions() {
+					items = [];
+					// Place non-overlapping-ish world regions across a 2D map
+					var anchors = [
+						[0.14, 0.18],
+						[0.36, 0.20],
+						[0.68, 0.16],
+						[0.84, 0.32],
+						[0.18, 0.56],
+						[0.44, 0.52],
+						[0.25, 0.82],
+						[0.74, 0.75]
+					];
+					for (var i = 0; i < NUM_REGIONS; i++) {
+						var ax = anchors[i][0] + (rand() - 0.5) * 0.08;
+						var ay = anchors[i][1] + (rand() - 0.5) * 0.08;
+						var hw = 0.055 + rand() * 0.035;
+						var hh = 0.055 + rand() * 0.035;
+						var minX = clamp(ax - hw, 0.05, 0.85);
+						var minY = clamp(ay - hh, 0.08, 0.85);
+						var maxX = clamp(ax + hw, minX + 0.07, 0.95);
+						var maxY = clamp(ay + hh, minY + 0.07, 0.94);
+						items.push({
+							payload: i,
+							min: [minX, minY],
+							max: [maxX, maxY],
+							center: [(minX + maxX) * 0.5, (minY + maxY) * 0.5]
+						});
+					}
+					buildBVH();
+					visibleBuildDepth = maxTreeDepth;
+					updateDepthLabel();
+					draw();
+				}
+
+				/* ── BVH Build & Subdivide ── */
+				function buildBVH() {
+					nodes = [];
+					maxTreeDepth = 0;
+					if (!items.length) return;
+					nodes.push(createEmptyNode(0));
+					subdivide(0, 0, items.length, 0);
+				}
+
+				function createEmptyNode(depth) {
+					return {
+						min: [0, 0],
+						max: [0, 0],
+						first: 0,
+						count: 0,
+						depth: depth,
+						axis: 0,
+						splitPos: 0,
+						status: 'unvisited', // 'hit' | 'culled' | 'unvisited'
+						visitOrder: -1
+					};
+				}
+
+				function subdivide(nodeIdx, begin, end, depth) {
+					if (depth > maxTreeDepth) maxTreeDepth = depth;
+
+					var minX = items[begin].min[0],
+						minY = items[begin].min[1];
+					var maxX = items[begin].max[0],
+						maxY = items[begin].max[1];
+					var cMinX = items[begin].center[0],
+						cMinY = items[begin].center[1];
+					var cMaxX = cMinX,
+						cMaxY = cMinY;
+
+					for (var i = begin + 1; i < end; i++) {
+						var it = items[i];
+						if (it.min[0] < minX) minX = it.min[0];
+						if (it.min[1] < minY) minY = it.min[1];
+						if (it.max[0] > maxX) maxX = it.max[0];
+						if (it.max[1] > maxY) maxY = it.max[1];
+
+						if (it.center[0] < cMinX) cMinX = it.center[0];
+						if (it.center[1] < cMinY) cMinY = it.center[1];
+						if (it.center[0] > cMaxX) cMaxX = it.center[0];
+						if (it.center[1] > cMaxY) cMaxY = it.center[1];
+					}
+
+					var node = nodes[nodeIdx];
+					node.min = [minX, minY];
+					node.max = [maxX, maxY];
+					node.depth = depth;
+
+					var count = end - begin;
+					var extX = cMaxX - cMinX;
+					var extY = cMaxY - cMinY;
+					var axis = extX >= extY ? 0 : 1;
+					node.axis = axis;
+
+					if (count <= LEAF_SIZE || (axis === 0 ? extX : extY) <= 0.0) {
+						node.first = begin;
+						node.count = count;
+						return;
+					}
+
+					// Partition items[begin..end) around median along 'axis'
+					var sub = items.slice(begin, end);
+					sub.sort(function(a, b) {
+						return a.center[axis] - b.center[axis];
+					});
+					for (var k = 0; k < sub.length; k++) {
+						items[begin + k] = sub[k];
+					}
+
+					var middle = begin + Math.floor(count / 2);
+					node.splitPos = (items[middle - 1].center[axis] + items[middle].center[axis]) * 0.5;
+
+					var left = nodes.length;
+					nodes.push(createEmptyNode(depth + 1));
+					nodes.push(createEmptyNode(depth + 1));
+					node.first = left;
+					node.count = 0;
+
+					subdivide(left, begin, middle, depth + 1);
+					subdivide(left + 1, middle, end, depth + 1);
+				}
+
+				/* ── DistanceSquared & QuerySphere ── */
+				function distanceSquared(min, max, pt) {
+					var cx = clamp(pt[0], min[0], max[0]);
+					var cy = clamp(pt[1], min[1], max[1]);
+					var dx = pt[0] - cx;
+					var dy = pt[1] - cy;
+					return dx * dx + dy * dy;
+				}
+
+				function runQuerySphere() {
+					for (var i = 0; i < nodes.length; i++) {
+						nodes[i].status = 'unvisited';
+						nodes[i].visitOrder = -1;
+					}
+					var hitPayloads = {};
+					var trace = [];
+					var rSq = queryRadius * queryRadius;
+
+					var stack = [0];
+					var stepCount = 0;
+
+					while (stack.length > 0) {
+						var idx = stack.pop();
+						var node = nodes[idx];
+
+						// Respect the interactive build depth slider
+						var treatAsLeaf = (node.count !== 0) || (node.depth >= visibleBuildDepth);
+						var distSq = distanceSquared(node.min, node.max, queryCenter);
+						stepCount++;
+						node.visitOrder = stepCount;
+
+						if (distSq > rSq) {
+							node.status = 'culled';
+							trace.push({
+								idx: idx,
+								status: 'CULL',
+								isLeaf: treatAsLeaf,
+								detail: 'dist² (' + distSq.toFixed(3) + ') > r² (' + rSq.toFixed(3) + ') -> subtree skipped'
+							});
+							continue;
+						}
+
+						node.status = 'hit';
+						if (treatAsLeaf) {
+							// Test regions inside this node's range
+							var leafHits = [];
+							var rangeBounds = getNodeItemRange(idx);
+							for (var j = rangeBounds[0]; j < rangeBounds[1]; j++) {
+								if (distanceSquared(items[j].min, items[j].max, queryCenter) <= rSq) {
+									hitPayloads[items[j].payload] = true;
+									leafHits.push('R' + items[j].payload);
+								}
+							}
+							trace.push({
+								idx: idx,
+								status: 'LEAF',
+								isLeaf: true,
+								detail: leafHits.length ? ('Loaded ' + leafHits.join(', ')) : 'Leaf box hit, region missed'
+							});
+							continue;
+						}
+
+						trace.push({
+							idx: idx,
+							status: 'HIT',
+							isLeaf: false,
+							detail: 'push children N' + node.first + ', N' + (node.first + 1)
+						});
+						stack.push(node.first);
+						stack.push(node.first + 1);
+					}
+
+					return {
+						hitPayloads: hitPayloads,
+						trace: trace,
+						nodesTested: stepCount
+					};
+				}
+
+				function getNodeItemRange(idx) {
+					var n = nodes[idx];
+					if (n.count !== 0) return [n.first, n.first + n.count];
+					var leftRange = getNodeItemRange(n.first);
+					var rightRange = getNodeItemRange(n.first + 1);
+					return [leftRange[0], rightRange[1]];
+				}
+
+				/* ── Coordinate Mapping ── */
+				function worldToScreen(wx, wy) {
+					var pad = 16 * DPR;
+					var mapW = W * 0.54 - pad * 2;
+					var mapH = H - pad * 2;
+					return {
+						x: pad + wx * mapW,
+						y: pad + wy * mapH,
+						scale: Math.min(mapW, mapH)
+					};
+				}
+
+				function screenToWorld(sx, sy) {
+					var pad = 16 * DPR;
+					var mapW = W * 0.54 - pad * 2;
+					var mapH = H - pad * 2;
+					return [
+						clamp((sx - pad) / mapW, 0.02, 0.98),
+						clamp((sy - pad) / mapH, 0.02, 0.98)
+					];
+				}
+
+				/* ── Drawing ── */
+				function draw() {
+					ctx.clearRect(0, 0, W, H);
+					ctx.fillStyle = COL.bg;
+					ctx.fillRect(0, 0, W, H);
+
+					var qResult = runQuerySphere();
+					var splitX = Math.round(W * 0.54);
+
+					// Divider between World View (left) and Tree View (right)
+					ctx.strokeStyle = COL.panelSep;
+					ctx.lineWidth = 1 * DPR;
+					ctx.beginPath();
+					ctx.moveTo(splitX, 0);
+					ctx.lineTo(splitX, H);
+					ctx.stroke();
+
+					// Panel headers
+					ctx.font = 'bold ' + (11 * DPR) + 'px Courier New, monospace';
+					ctx.fillStyle = COL.textDim;
+					ctx.fillText('WORLD SPACE (2D STREAMING MAP)', 14 * DPR, 16 * DPR);
+					ctx.fillText('FLAT ARRAY BVH TREE', splitX + 14 * DPR, 16 * DPR);
+
+					drawWorldView(qResult);
+					drawTreeView(qResult, splitX);
+					updateReadout(qResult);
+					updateBreakdown(qResult);
+				}
+
+				function drawWorldView(qResult) {
+					// 1. Draw BVH Node AABBs up to visibleBuildDepth
+					for (var i = 0; i < nodes.length; i++) {
+						var n = nodes[i];
+						if (n.depth > visibleBuildDepth) continue;
+
+						var p0 = worldToScreen(n.min[0], n.min[1]);
+						var p1 = worldToScreen(n.max[0], n.max[1]);
+						var bw = p1.x - p0.x;
+						var bh = p1.y - p0.y;
+
+						if (n.status === 'hit') {
+							ctx.strokeStyle = COL.edgeHit;
+							ctx.lineWidth = (n.depth === visibleBuildDepth || n.count !== 0 ? 1.6 : 1.0) * DPR;
+							ctx.setLineDash([]);
+						} else if (n.status === 'culled') {
+							ctx.strokeStyle = COL.edgeCull;
+							ctx.lineWidth = 1.2 * DPR;
+							ctx.setLineDash([4 * DPR, 4 * DPR]);
+						} else {
+							ctx.strokeStyle = COL.edgeIdle;
+							ctx.lineWidth = 0.8 * DPR;
+							ctx.setLineDash([2 * DPR, 4 * DPR]);
+						}
+						ctx.strokeRect(p0.x, p0.y, bw, bh);
+						ctx.setLineDash([]);
+
+						// Show median split line for active depth
+						if (n.count === 0 && n.depth === visibleBuildDepth - 1) {
+							ctx.strokeStyle = 'rgba(255, 224, 102, 0.35)';
+							ctx.lineWidth = 1 * DPR;
+							ctx.setLineDash([3 * DPR, 3 * DPR]);
+							ctx.beginPath();
+							if (n.axis === 0) {
+								var sx = worldToScreen(n.splitPos, 0).x;
+								ctx.moveTo(sx, p0.y);
+								ctx.lineTo(sx, p1.y);
+							} else {
+								var sy = worldToScreen(0, n.splitPos).y;
+								ctx.moveTo(p0.x, sy);
+								ctx.lineTo(p1.x, sy);
+							}
+							ctx.stroke();
+							ctx.setLineDash([]);
+						}
+					}
+
+					// 2. Draw individual streaming Regions (Items)
+					for (var j = 0; j < items.length; j++) {
+						var it = items[j];
+						var r0 = worldToScreen(it.min[0], it.min[1]);
+						var r1 = worldToScreen(it.max[0], it.max[1]);
+						var rw = r1.x - r0.x;
+						var rh = r1.y - r0.y;
+						var isLoaded = !!qResult.hitPayloads[it.payload];
+
+						ctx.fillStyle = isLoaded ? 'rgba(0, 229, 255, 0.22)' : 'rgba(255, 255, 255, 0.04)';
+						ctx.fillRect(r0.x, r0.y, rw, rh);
+
+						ctx.strokeStyle = isLoaded ? COL.regionHit : COL.regionIdle;
+						ctx.lineWidth = (isLoaded ? 2.0 : 1.0) * DPR;
+						ctx.strokeRect(r0.x, r0.y, rw, rh);
+
+						// Centroid dot + label
+						var c = worldToScreen(it.center[0], it.center[1]);
+						ctx.fillStyle = isLoaded ? COL.regionHit : '#888';
+						ctx.beginPath();
+						ctx.arc(c.x, c.y, 2.5 * DPR, 0, Math.PI * 2);
+						ctx.fill();
+
+						ctx.font = 'bold ' + (10 * DPR) + 'px Courier New, monospace';
+						ctx.fillText('R' + it.payload, r0.x + 4 * DPR, r0.y + 12 * DPR);
+					}
+
+					// 3. Draw Player Query Sphere
+					var qc = worldToScreen(queryCenter[0], queryCenter[1]);
+					var qEdge = worldToScreen(queryCenter[0] + queryRadius, queryCenter[1]);
+					var radPx = Math.abs(qEdge.x - qc.x);
+
+					ctx.fillStyle = 'rgba(255, 224, 102, 0.08)';
+					ctx.beginPath();
+					ctx.arc(qc.x, qc.y, radPx, 0, Math.PI * 2);
+					ctx.fill();
+
+					ctx.strokeStyle = COL.query;
+					ctx.lineWidth = (hoverTarget === 'radius' ? 2.5 : 1.5) * DPR;
+					ctx.beginPath();
+					ctx.arc(qc.x, qc.y, radPx, 0, Math.PI * 2);
+					ctx.stroke();
+
+					// Center handle
+					if (hoverTarget === 'center') {
+						ctx.strokeStyle = '#fff';
+						ctx.lineWidth = 1.5 * DPR;
+						ctx.beginPath();
+						ctx.arc(qc.x, qc.y, 9 * DPR, 0, Math.PI * 2);
+						ctx.stroke();
+					}
+					ctx.fillStyle = COL.query;
+					ctx.beginPath();
+					ctx.arc(qc.x, qc.y, 5 * DPR, 0, Math.PI * 2);
+					ctx.fill();
+
+					// Radius drag handle on right rim
+					ctx.fillStyle = COL.query;
+					ctx.beginPath();
+					ctx.arc(qc.x + radPx, qc.y, 4 * DPR, 0, Math.PI * 2);
+					ctx.fill();
+				}
+
+				function drawTreeView(qResult, splitX) {
+					var treeW = W - splitX;
+					var topY = 44 * DPR;
+					var levelH = (H - topY - 36 * DPR) / Math.max(1, maxTreeDepth);
+
+					// Compute 2D positions for each node in the binary tree
+					var pos = {};
+
+					function layout(idx, x0, x1, depth) {
+						var xm = (x0 + x1) * 0.5;
+						var ym = topY + depth * levelH;
+						pos[idx] = {
+							x: xm,
+							y: ym
+						};
+						var n = nodes[idx];
+						if (n.count === 0 && depth < visibleBuildDepth) {
+							layout(n.first, x0, xm, depth + 1);
+							layout(n.first + 1, xm, x1, depth + 1);
+						}
+					}
+					layout(0, splitX + 12 * DPR, W - 12 * DPR, 0);
+
+					// Draw edges
+					for (var i = 0; i < nodes.length; i++) {
+						var n = nodes[i];
+						if (!pos[i] || n.count !== 0 || n.depth >= visibleBuildDepth) continue;
+						var children = [n.first, n.first + 1];
+						for (var c = 0; c < 2; c++) {
+							var chIdx = children[c];
+							if (!pos[chIdx]) continue;
+							var ch = nodes[chIdx];
+							ctx.strokeStyle = ch.status === 'hit' ? COL.edgeHit : (ch.status === 'culled' ? COL.edgeCull : '#333');
+							ctx.lineWidth = (ch.status === 'unvisited' ? 1 : 1.5) * DPR;
+							ctx.beginPath();
+							ctx.moveTo(pos[i].x, pos[i].y);
+							ctx.lineTo(pos[chIdx].x, pos[chIdx].y);
+							ctx.stroke();
+						}
+					}
+
+					// Draw nodes
+					for (var k = 0; k < nodes.length; k++) {
+						if (!pos[k]) continue;
+						var nd = nodes[k];
+						var p = pos[k];
+						var isLeaf = (nd.count !== 0) || (nd.depth >= visibleBuildDepth);
+						var col = nd.status === 'hit' ? COL.edgeHit : (nd.status === 'culled' ? COL.edgeCull : '#444');
+
+						ctx.fillStyle = '#161616';
+						ctx.strokeStyle = col;
+						ctx.lineWidth = 1.8 * DPR;
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, 11 * DPR, 0, Math.PI * 2);
+						ctx.fill();
+						ctx.stroke();
+
+						ctx.fillStyle = col;
+						ctx.font = 'bold ' + (9.5 * DPR) + 'px Courier New, monospace';
+						ctx.textAlign = 'center';
+						ctx.textBaseline = 'middle';
+						var label = (nd.count !== 0) ? ('R' + items[nd.first].payload) : ('N' + k);
+						ctx.fillText(label, p.x, p.y);
+
+						// Axis badge on internal nodes
+						if (!isLeaf) {
+							ctx.fillStyle = COL.textDim;
+							ctx.font = (8.5 * DPR) + 'px Courier New, monospace';
+							ctx.fillText(nd.axis === 0 ? 'split:X' : 'split:Y', p.x, p.y - 16 * DPR);
+						}
+					}
+					ctx.textAlign = 'start';
+					ctx.textBaseline = 'alphabetic';
+				}
+
+				function updateDepthLabel() {
+					depthLabelEl.textContent = 'Build Depth: ' + visibleBuildDepth + ' / ' + maxTreeDepth;
+				}
+
+				function updateReadout(qResult) {
+					var loadedList = Object.keys(qResult.hitPayloads).map(function(k) {
+						return 'R' + k;
+					});
+					var culledCount = 0;
+					for (var i = 0; i < nodes.length; i++) {
+						if (nodes[i].status === 'culled') culledCount++;
+					}
+					readoutEl.innerHTML =
+						'<span style="color: var(--fg-dim);">Total Regions: <b style="color: var(--cyan);">' + items.length + '</b></span>' +
+						'<span style="color: var(--fg-dim);">BVH Nodes Tested: <b style="color: var(--green);">' + qResult.nodesTested + ' / ' + nodes.length + '</b></span>' +
+						'<span style="color: var(--fg-dim);">Subtrees Culled: <b style="color: var(--red);">' + culledCount + '</b></span>' +
+						'<span style="color: var(--fg-dim);">Streaming In: <b style="color: var(--cyan);">[' + (loadedList.length ? loadedList.join(', ') : 'NONE') + ']</b></span>';
+				}
+
+				function updateBreakdown(qResult) {
+					var html = '<div style="margin-bottom: 6px; color: var(--fg-dim);">Stack Traversal Trace (<code>QuerySphere</code>):</div>';
+					for (var i = 0; i < qResult.trace.length; i++) {
+						var t = qResult.trace[i];
+						var sCol = t.status === 'CULL' ? 'var(--red)' : (t.status === 'LEAF' ? 'var(--cyan)' : 'var(--green)');
+						html += '<div style="display: flex; gap: 8px; margin-bottom: 3px;">';
+						html += '<span style="color: ' + sCol + '; min-width: 52px;">[' + t.status + ']</span>';
+						html += '<span>Node <b>N' + t.idx + '</b>: ' + t.detail + '</span>';
+						html += '</div>';
+					}
+					breakdownEl.innerHTML = html;
+				}
+
+				/* ── Pointer Interaction ── */
+				function getPointerPos(e) {
+					var rect = canvas.getBoundingClientRect();
+					var t = e.touches ? e.touches[0] : e;
+					return {
+						x: (t.clientX - rect.left) * DPR,
+						y: (t.clientY - rect.top) * DPR
+					};
+				}
+
+				function hitTestQuery(sx, sy) {
+					var qc = worldToScreen(queryCenter[0], queryCenter[1]);
+					var qEdge = worldToScreen(queryCenter[0] + queryRadius, queryCenter[1]);
+					var radPx = Math.abs(qEdge.x - qc.x);
+					var dx = sx - qc.x,
+						dy = sy - qc.y;
+					var dist = Math.sqrt(dx * dx + dy * dy);
+					if (dist < 14 * DPR) return 'center';
+					if (Math.abs(dist - radPx) < 12 * DPR) return 'radius';
+					if (sx < W * 0.54 && dist < radPx) return 'center';
+					return null;
+				}
+
+				function onDown(e) {
+					var p = getPointerPos(e);
+					if (p.x > W * 0.54) return;
+					var hit = hitTestQuery(p.x, p.y);
+					if (hit) {
+						e.preventDefault();
+						dragging = hit;
+						canvas.style.cursor = 'grabbing';
+					} else {
+						// Click anywhere in world view to jump player there
+						e.preventDefault();
+						queryCenter = screenToWorld(p.x, p.y);
+						dragging = 'center';
+						canvas.style.cursor = 'grabbing';
+						draw();
+					}
+				}
+
+				function onMove(e) {
+					var p = getPointerPos(e);
+					if (!dragging) {
+						var h = hitTestQuery(p.x, p.y);
+						if (h !== hoverTarget) {
+							hoverTarget = h;
+							canvas.style.cursor = h === 'radius' ? 'ew-resize' : (h === 'center' ? 'pointer' : 'grab');
+							draw();
+						}
+						return;
+					}
+					e.preventDefault();
+					var wPos = screenToWorld(p.x, p.y);
+					if (dragging === 'center') {
+						queryCenter = wPos;
+					} else if (dragging === 'radius') {
+						var dx = wPos[0] - queryCenter[0];
+						var dy = wPos[1] - queryCenter[1];
+						queryRadius = clamp(Math.sqrt(dx * dx + dy * dy), 0.05, 0.45);
+					}
+					draw();
+				}
+
+				function onUp() {
+					dragging = null;
+					canvas.style.cursor = 'grab';
+				}
+
+				canvas.addEventListener('mousedown', onDown);
+				window.addEventListener('mousemove', onMove);
+				window.addEventListener('mouseup', onUp);
+				canvas.addEventListener('touchstart', onDown, {
+					passive: false
+				});
+				canvas.addEventListener('touchmove', onMove, {
+					passive: false
+				});
+				canvas.addEventListener('touchend', onUp);
+
+				btnPrev.addEventListener('click', function() {
+					visibleBuildDepth = Math.max(0, visibleBuildDepth - 1);
+					updateDepthLabel();
+					draw();
+				});
+
+				btnNext.addEventListener('click', function() {
+					visibleBuildDepth = Math.min(maxTreeDepth, visibleBuildDepth + 1);
+					updateDepthLabel();
+					draw();
+				});
+
+				btnRegen.addEventListener('click', function() {
+					generateRegions();
+				});
+
+				window.addEventListener('resize', function() {
+					resize();
+					draw();
+				});
+
+				generateRegions();
+			}
+
+			createBVHInspector(
+				document.getElementById('bvh-canvas'),
+				document.getElementById('bvh-readout'),
+				document.getElementById('bvh-breakdown'),
+				document.getElementById('bvh-depth-label'),
+				document.getElementById('bvh-step-prev'),
+				document.getElementById('bvh-step-next'),
+				document.getElementById('bvh-regen')
+			);
+		})();
+	</script>
+</p>
+<hr>
+<p>With the BVH in place, it's time to build the region streaming—or at least the way I did it.</p>
+<p>While researching, I saw people doing this using separate scenes in Unity. That concept makes sense, but it felt wrong to me because it would be hell to debug, if you ask me. So I went with another approach that works better for my engine.</p>
+<p>A scene is a collection of entities and their components that get displayed to the user. I think everybody knows that, but for my engine, I added another layer on top of it that I call <strong>world regions</strong>. Inside the scene file, each region is stored as a section with a bounding box and the entities inside it.</p>
+<p>Here is what the region control panel looks like in my engine:</p>
+<figure class="post__image post__image--wide"><img loading="lazy"  src="https://alielmorsy.github.io/media/posts/14/Screenshot-2026-10-15-144755.png" alt="" width="1168" height="775" sizes="(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)" srcset="https://alielmorsy.github.io/media/posts/14/responsive/Screenshot-2026-10-15-144755-xs.png 300w ,https://alielmorsy.github.io/media/posts/14/responsive/Screenshot-2026-10-15-144755-sm.png 480w ,https://alielmorsy.github.io/media/posts/14/responsive/Screenshot-2026-10-15-144755-md.png 768w ,https://alielmorsy.github.io/media/posts/14/responsive/Screenshot-2026-10-15-144755-lg.png 1024w"></figure>
+<p>The developer can create regions easily and define the bounding box, and entities inside it get linked automatically to that bounding box.</p>
+<p>It looks simple, but the panel mixes three different things: what the region <em>is</em> (actual state), what it's <em>asked to be</em> (desired state), and what the scene file <em>says</em> (authored state). On top of that, one button, "Set Active", is a fourth thing that has nothing to do with loading. Let's go through them one by one.</p>
+<h2>The four states</h2>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unloaded</strong></td>
+<td>No entities exist. Only the region entity with its metadata.</td>
+</tr>
+<tr>
+<td><strong>Resident</strong></td>
+<td>Entities exist. The region is loaded and kept in the world.</td>
+</tr>
+<tr>
+<td><strong>Active</strong></td>
+<td>Entities exist, render, and tick.</td>
+</tr>
+<tr>
+<td><strong>Unloading</strong></td>
+<td>A one-frame step: queries skip the region's entities. On the next frame its content is dropped and it becomes Unloaded.</td>
+</tr>
+</tbody>
+</table>
+<h2>What each part of a region row shows</h2>
+<p>The collapsed row:</p>
+<ul>
+<li><strong>State badge:</strong> the actual state.</li>
+<li><code>-&gt; X</code><strong>:</strong> the desired state. It's shown only when it differs from the actual one, which means the region is still transitioning.</li>
+<li><code>N src</code><strong>:</strong> how many streaming sources are asking for this region in the current frame.</li>
+<li><code>load failed</code><strong>:</strong> the read or parse failed, and it won't retry.</li>
+</ul>
+<p>Expand it and you get more:</p>
+<ul>
+<li><strong>authored (text):</strong> the region's state line in the scene file.</li>
+<li><strong>request (Unloaded / Resident / Active / clear):</strong> an override. It beats the authored state, every streaming source, and the editor's load-everything mode, and it stays until you press clear. The highlighted button is the current <em>desired</em> state, not "which override you set". In the edit world that's always Active.</li>
+<li><strong>Select entities:</strong> selects the region's members.</li>
+</ul>
+<p>The trap here is that an override left set during Play makes streaming look broken, because that region ignores the player completely.</p>
+<p>Then there is the authoring section, which only exists in the edit world:</p>
+<ul>
+<li><strong>authored (Unloaded / Resident / Active):</strong> writes the scene file's state line. It's undoable and saved, and it's the starting value that desired resets to every frame.</li>
+<li><strong>Set Active:</strong> makes this the region new entities get created in. It has nothing to do with the Active load state. The two names collide, and it should probably be called something like "Make current".</li>
+<li><strong>Rename / Delete / min-max bounds:</strong> these edit the region itself.</li>
+</ul>
+<p>One more thing: the Unload button on a scene instance row unloads the whole scene, not one region.</p>
+<h2>How desired is computed every frame</h2>
+<ol>
+<li><strong>Start value:</strong> the authored state. In the editor's edit world it's Active for every region instead, because the editor loads everything for editing.</li>
+<li><strong>Streaming sources:</strong> each source whose radius reaches the region's box raises it to the source's target (usually Active). A region that's already loaded is tested against <code>radius × hysteresis</code>.</li>
+<li><strong>Region 0:</strong> it's raised to at least Resident whenever any other region is loaded or wants to be.</li>
+<li><strong>Override:</strong> if one is set, it replaces the result entirely.</li>
+</ol>
+<p>After that, each region takes one transition per frame:</p>
+<ul>
+<li><strong>Unloaded → loaded:</strong> waits for region 0 to load first, reads the region's bytes, then creates its entities.</li>
+<li><strong>Resident ↔ Active:</strong> just a state change. Nothing is loaded or dropped.</li>
+<li><strong>Loaded → Unloading → Unloaded:</strong> region 0 unloads last.</li>
+</ul>
+<h2>Common cases</h2>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Edit world, nothing touched</td>
+<td>Every region Active, whatever its authored state</td>
+</tr>
+<tr>
+<td>Edit world, request Unloaded</td>
+<td>Region unloads; the override beats load-everything</td>
+</tr>
+<tr>
+<td>Play, authored Unloaded, player far away</td>
+<td>Unloaded</td>
+</tr>
+<tr>
+<td>Play, player within radius</td>
+<td>Active, if the source's target is Active</td>
+</tr>
+<tr>
+<td>Authored Resident or Active</td>
+<td>Always loaded, at any distance</td>
+</tr>
+<tr>
+<td>Override set</td>
+<td>Ignores everything until you press clear</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>Regions around the player need to be loaded and rendered (Active), but they can still be heavy when the player is far away from them. Loading every full-resolution model is overkill. Imagine standing 50m away from a model: you don't see nearly as much detail at 50m as you do at 3m. That's where LODs come in.</p>
+<p>While iterating on my game engine, I used a traditional G-Buffer for a long time. It worked fine with no issues, but for my latest iteration, I decided to try a <strong>Visibility Buffer</strong>—especially since my shading language supports what I call <em>material passes</em>, which is the ability to export variants of a shader written by the developer to use in different cases.</p>
+<p class="msg msg--info">Currently, I use this concept in two places: the Visibility Buffer and Global Illumination. Someone might ask why I don't just use the G-Buffer in GI. That's because the G-Buffer culls everything behind the camera, whereas things behind you can still bounce light and influence the scene you're looking at, so GI needs its own pass.</p>
+<p>From the G-Buffer, I moved to a full Nanite-style clustering system, which—you guessed it—also has great support for LOD selection.</p>
+<p>From importing a model to displaying it on screen, we run through a chain of operations to deliver an optimized LOD-based model.</p>
+<p>The first step is <strong>Importing the Model</strong>. Importing a model into the engine was one of the hardest steps so far because the technical details are insane, so let's walk through it step by step.</p>
+<h3>Prepare Source Mesh</h3>
+<p>To prepare the source mesh, the engine does four small steps:</p>
+<ol>
+<li>Expand sub-meshes into individual mesh objects so each cluster later handles only one material.</li>
+<li>Use the <code>meshoptimizer</code> library to optimize the model for overdraw, vertex caching, and so on.</li>
+<li>Validate the geometry and run any needed operations on the UVs.</li>
+<li>Compute the bounding box for the mesh.</li>
+</ol>
+<h3>Cluster The Mesh (LOD0)</h3>
+<p>In this stage, we use <code>meshoptimizer</code> again, but this time to create meshlets with <code>meshopt_buildMeshlets</code>.</p>
+<p>This produces clusters ready for LOD0, which is still the original full-detail model, just split up and ready for the visibility buffer.</p>
+<p class="msg msg--info">A meshlet is a small patch of the mesh capped at 64 vertices and up to 126 triangles.</p>
+<h3>Build The DAG (LOD1 to LOD_Max)</h3>
+<p>The developer can choose the maximum number of LODs for each model (by default it's 1, which means just LOD0). While testing, I used up to LOD7, which worked pretty well.</p>
+<p>We loop through LODs from 1 up to the maximum and run the exact same steps:</p>
+<ol>
+<li><strong>Merge neighbours into groups:</strong> Clusters that touch each other in LOD<sub>N-1</sub> are bundled together, about 8 per group.</li>
+<li><strong>Freeze the border:</strong> We count how often each edge is used inside the group. Any edge on the outer border gets locked in place.</li>
+<li><strong>Simplify the inside:</strong> The inside of each group is reduced to about half of its triangles. The border can't move, so two neighbouring groups always agree on the edge they share.</li>
+<li><strong>Measure the error:</strong> After simplifying, we measure how far the new surface moved from the old one. We add that to the biggest error already recorded in the group's children, so the error only grows when we go coarser—it never shrinks. The group also gets a sphere that encloses all of it and all of its children.</li>
+<li><strong>Cut it back into clusters:</strong> The simplified group is split back into clusters again. These new clusters become LOD<sub>N</sub>.</li>
+<li><strong>Stamp both sides:</strong> The new clusters record "I came from a group with this error and this sphere". The old clusters record "my parent group has this error and this sphere". Same pair of numbers on both sides.</li>
+</ol>
+<p class="msg msg--info">Vertices that sit at the same position, like the ones on a texture seam, are treated as one vertex when we lock the border. Without that, one side of the seam stays locked and the other side walks away, and you get a crack that only shows on textured models.</p>
+<p>So LOD1 is built from LOD0's clusters, LOD2 from LOD1's, and so on. Every step roughly halves the triangle count, so a one-million-triangle model needs about 14 steps to get down to a single cluster (my own math, not a measured cook). All the levels together end up about twice the size of LOD0 because the sizes shrink by half every time.</p>
+<h3>Why Stamping Both Sides Matters</h3>
+<p>This is the trick that makes everything work. At runtime the GPU asks every cluster two questions:</p>
+<ul>
+<li><strong>Am I detailed enough for this distance?</strong> My own error is smaller than one pixel.</li>
+<li><strong>Would my parent already be good enough?</strong> My parent's error is still bigger than one pixel.</li>
+</ul>
+<p>It draws the cluster only if the first answer is yes and the second one is no. Because both levels use the same error and the same sphere, exactly one side of every group boundary gets drawn. No gaps, no overlaps, no cracks. And because every group decides as a whole, the part of the model close to the camera can be detailed while the far part is coarse, on the same model.</p>
+<p>That's also the reason I didn't go with the simple way of making LOD0, LOD1, LOD2 as separate copies. If every level is simplified on its own, there is no relationship between a coarse triangle and the fine triangles it replaced, so you can only pick one level for the whole model.</p>
+<h3>When a Group Can't Be Simplified</h3>
+<p>It happens. A lone cluster, a group that is too small, or a group where nothing can collapse. Those clusters stay as they are and they stay visible for every distance beyond their own error. We also copy them into every coarser level, so each level is still a complete model when drawn alone.</p>
+<p>The loop stops when one cluster is left, when we reach the maximum number of LODs, or when a whole step fails to reduce the triangle count. In the last case, that step is thrown away. The cook also fails completely if the result can't be trusted, because a half-built chain is a model that silently loses a piece at some distance, and that is much worse than refusing to import it.</p>
+<h3>Writing The Result</h3>
+<ul>
+<li>Every level has its own compact list of vertices. A coarse level uses about half the vertices of the level below it, so it doesn't pay for vertices it doesn't use.</li>
+<li>Every cluster takes the same fixed space. The empty slots are filled with triangles with zero area, which the GPU throws away before doing any work. The fixed size lets the visibility buffer find the cluster of a triangle with a simple bit shift.</li>
+<li>The vertices are packed into 32 bytes: 16-bit positions inside the model bounds, packed normals and tangents, and half-float UVs.</li>
+<li>Every level stores its <strong>biggest parent error</strong>. This is the most important number for the next step because it tells us when a level stops being useful.</li>
+</ul>
+<h2>Second Step: Choosing The LOD</h2>
+<p>Overview: every frame, for every instance in the world, the renderer calculates how big the error is on the screen and uses it to decide which levels it needs in memory.</p>
+<p>The number is <strong>how many pixels does one unit of error cover right now</strong>. It depends on the distance to the nearest point of the model, the scale of the instance, and the resolution and field of view of the camera. I use the same camera as the GPU culling, so the CPU agrees with what the GPU is going to draw.</p>
+<p>Then the rule is simple: a level is needed as long as its biggest parent error, multiplied by that number, is more than one pixel. Once it's under one pixel, nobody will see the difference, so that level and every finer one is not needed.</p>
+<p>From that, each model gets three answers:</p>
+<ul>
+<li><strong>Fit:</strong> the finest level the GPU might still draw right now.</li>
+<li><strong>Keep:</strong> the same test but with a 30% margin. We keep levels a little longer than we need them, so a camera moving back and forth doesn't load and unload the same level every few frames. Same idea as the hysteresis in the regions.</li>
+<li><strong>Wanted:</strong> the fit plus a global bias. The bias is a number that goes up when the system is under pressure (more on that later). It only changes what we load, never what we keep.</li>
+</ul>
+<p>If a model has many instances we take the finest answer of all of them. Models cooked before the error existed still work with a fallback that uses the distance only.</p>
+<h2>Third Step: Streaming It In</h2>
+<p>Overview: every frame has a budget of about 10 MB of uploads. The streamer sorts what it wants to load, reads it from disk in chunks, copies the chunks to a staging buffer and then to the GPU. A level only becomes visible when all of it is on the GPU. Levels nobody wants anymore are removed.</p>
+<p>Now the details:</p>
+<ol>
+<li><strong>The coarsest level is always there:</strong> It's loaded first and never removed, so a model can always draw something, even if it's the ugly version.</li>
+<li><strong>What loads first:</strong> Loads already in progress come first, then everything else sorted by the size of the model on the screen. Inside one model, coarse levels load before fine ones so each level lands on top of its parent. A level can't start loading unless the level coarser than it is at least on its way, because the GPU depends on that parent. A hole in the chain shows up as a hole in the model.</li>
+<li><strong>How the bytes travel:</strong> A level is cut into chunks (up to 8 MB), each one is read in the background by the job system. A finished read is copied into a shared staging ring (33 MB split in three slices, one for each frame in flight), and then the GPU copies it from the ring into the mesh memory.</li>
+<li><strong>When a level becomes ready:</strong> When every chunk arrived and the last copy was queued on a <em>previous</em> frame. The bytes we queue this frame only reach the GPU when the frame is submitted, so marking the level ready in the same frame could let the GPU read memory that is still empty.</li>
+<li><strong>Eviction:</strong> A level is removed when nobody asked for it this frame and it has been in memory for at least 60 frames. One more rule: if a finer level stays, everything coarser than it stays too. Same reason, no holes in the chain.</li>
+<li><strong>When something fails:</strong> A failed read is retried up to 3 times. After that the level is marked as failed and the coarser level is drawn instead. If the coarsest level itself fails, the model is never drawn and the log says it loud and clear.</li>
+</ol>
+<p class="msg msg--highlight">My favourite part: when the system can't keep up. If the budget runs out, the memory is full, or the staging ring is full for 120 frames in a row, the global bias goes up by one (up to 4). The bias makes everything ask for a coarser level, so there is less to load and the system recovers instead of freezing. After 120 calm frames, it goes down by one again. It's deliberately slow, because a big load can keep the budget empty for a long time and I don't want the quality to jump up and down.</p>
+<p>Regions and LODs are the same idea at two scales. Regions decide what exists in the world, LODs decide how much of each thing sits in memory. Both are a loop of "what do I want, what do I have, move one step closer", and both use a margin so nothing flickers on the boundary.</p>
+<p>This is one of the first articles that dives deep into my game engine. If you're interested in other concepts inside my engine, don't hesitate to contact me over email or LinkedIn anytime.</p>
+            ]]>
+        </content>
+    </entry>
     <entry>
         <title>How to Render Beautiful Text for your UI library (Part 1)</title>
         <author>
